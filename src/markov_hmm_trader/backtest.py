@@ -6,9 +6,17 @@ import numpy as np
 import pandas as pd
 
 from .config import PipelineConfig
-from .diagnostics import make_seed_diagnostic_rows, make_window_diagnostic_row
+from .diagnostics import (
+    make_emission_diagnostic_rows,
+    make_seed_diagnostic_rows,
+    make_state_stability_row,
+    make_transition_matrix_row,
+    make_window_diagnostic_row,
+)
+from .ensemble import add_ensemble_signals
 from .features import feature_columns
 from .hmm_model import fit_hmm_best_of_seeds, semantic_probabilities
+from .nn_model import add_nn_confirmation
 from .states import STATE_BEAR, STATE_BULL, STATE_ORDER, STATE_SIDE
 
 
@@ -17,6 +25,10 @@ class BacktestResult:
     backtest: pd.DataFrame
     window_diagnostics: pd.DataFrame
     seed_diagnostics: pd.DataFrame
+    hmm_model_selection: pd.DataFrame
+    hmm_emissions: pd.DataFrame
+    hmm_transition_matrices: pd.DataFrame
+    hmm_state_stability: pd.DataFrame
 
 
 def drawdown_multiplier(current_dd: float, cfg: PipelineConfig) -> float:
@@ -37,7 +49,7 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
     bull = float(row[STATE_BULL])
     bear = float(row[STATE_BEAR])
     side = float(row[STATE_SIDE])
-    signal = bull - bear
+    signal = float(row.get("ensemble_signal", bull - bear))
 
     dominant = max(
         [(bull, STATE_BULL), (bear, STATE_BEAR), (side, STATE_SIDE)],
@@ -99,10 +111,15 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
 
 
 def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResult:
-    features = feature_columns()
+    features = feature_columns(cfg)
     df = df.copy()
     window_rows = []
     seed_rows = []
+    model_selection_rows = []
+    emission_rows = []
+    transition_rows = []
+    stability_rows = []
+    previous_fit = None
 
     for col in STATE_ORDER:
         df[col] = np.nan
@@ -149,8 +166,17 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         if cfg.enable_diagnostics:
             window_rows.append(make_window_diagnostic_row(window_id, train, test, fit, next_probs))
             seed_rows.extend(make_seed_diagnostic_rows(window_id, train.index[-1], fit))
+            for row in fit.model_selection_rows:
+                model_selection_rows.append({"window_id": window_id, **row})
+            emission_rows.extend(make_emission_diagnostic_rows(window_id, train, fit, features))
+            transition_rows.append(make_transition_matrix_row(window_id, train, test, fit))
+            stability_rows.append(make_state_stability_row(window_id, previous_fit, fit))
+            previous_fit = fit
 
     df["hmm_signal"] = df[STATE_BULL] - df[STATE_BEAR]
+    if cfg.enable_nn_confirmation or cfg.ensemble_mode != "hmm_only":
+        df = add_nn_confirmation(df, features, cfg)
+        df = add_ensemble_signals(df, cfg)
 
     equity = 1.0
     peak = 1.0
@@ -189,4 +215,8 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         backtest=df,
         window_diagnostics=pd.DataFrame(window_rows),
         seed_diagnostics=pd.DataFrame(seed_rows),
+        hmm_model_selection=pd.DataFrame(model_selection_rows),
+        hmm_emissions=pd.DataFrame(emission_rows),
+        hmm_transition_matrices=pd.DataFrame(transition_rows),
+        hmm_state_stability=pd.DataFrame(stability_rows),
     )

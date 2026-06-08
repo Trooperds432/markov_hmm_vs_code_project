@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .hmm_model import HMMFitResult
-from .states import STATE_ORDER
+from .states import STATE_BEAR, STATE_BULL, STATE_ORDER, STATE_SIDE
 
 
 def _safe_float(value: Any) -> float:
@@ -105,6 +105,115 @@ def make_seed_diagnostic_rows(window_id: int, train_end: pd.Timestamp, fit: HMMF
             }
         )
     return rows
+
+
+def _state_components(state_map: dict[int, str], state: str) -> list[int]:
+    return sorted(component for component, mapped in state_map.items() if mapped == state)
+
+
+def _covariance_for_component(fit: HMMFitResult, component: int) -> np.ndarray:
+    covars = np.asarray(fit.model.covars_, dtype=float)
+    if covars.ndim == 3:
+        return covars[component]
+    if covars.ndim == 2:
+        values = covars[component]
+        return np.diag(values)
+    values = np.asarray(covars[component], dtype=float)
+    return np.diag(np.atleast_1d(values))
+
+
+def make_emission_diagnostic_rows(
+    window_id: int,
+    train: pd.DataFrame,
+    fit: HMMFitResult,
+    features: list[str],
+) -> list[dict[str, Any]]:
+    rows = []
+    dwell = expected_dwell_times(np.asarray(fit.model.transmat_, dtype=float))
+    for component in range(fit.model.n_components):
+        covariance = _covariance_for_component(fit, component)
+        diag = np.diag(covariance)
+        row: dict[str, Any] = {
+            "window_id": window_id,
+            "component": component,
+            "semantic_state": fit.state_map.get(component, ""),
+            "occupancy": _safe_float(fit.component_occupancy.get(component, np.nan)),
+            "forward_return": _safe_float(fit.component_forward_returns.get(component, np.nan)),
+            "expected_dwell": _safe_float(dwell.get(component, np.nan)),
+            "covariance_trace": _safe_float(np.trace(covariance)),
+            "covariance_mean_diag": _safe_float(np.mean(diag)),
+            "covariance_json": json.dumps(covariance.round(8).tolist()),
+            "train_start": train.index[0].date().isoformat(),
+            "train_end": train.index[-1].date().isoformat(),
+        }
+        for index, feature in enumerate(features):
+            row[f"emission_mean_{feature}"] = _safe_float(fit.model.means_[component, index])
+            row[f"emission_cov_diag_{feature}"] = _safe_float(diag[index])
+        rows.append(row)
+    return rows
+
+
+def make_transition_matrix_row(
+    window_id: int,
+    train: pd.DataFrame,
+    test: pd.DataFrame,
+    fit: HMMFitResult,
+) -> dict[str, Any]:
+    return {
+        "window_id": window_id,
+        "train_start": train.index[0].date().isoformat(),
+        "train_end": train.index[-1].date().isoformat(),
+        "test_start": test.index[0].date().isoformat(),
+        "test_end": test.index[-1].date().isoformat(),
+        "selected_n_states": int(fit.selected_n_states),
+        "selected_covariance_type": fit.selected_covariance_type,
+        "transition_matrix": json.dumps(np.asarray(fit.model.transmat_).round(8).tolist()),
+        "semantic_state_map": json.dumps({int(k): v for k, v in fit.state_map.items()}, sort_keys=True),
+    }
+
+
+def make_state_stability_row(
+    window_id: int,
+    previous_fit: HMMFitResult | None,
+    current_fit: HMMFitResult,
+) -> dict[str, Any]:
+    current_map = {int(k): v for k, v in current_fit.state_map.items()}
+    previous_map = {} if previous_fit is None else {int(k): v for k, v in previous_fit.state_map.items()}
+    row: dict[str, Any] = {
+        "window_id": window_id,
+        "previous_state_map": json.dumps(previous_map, sort_keys=True),
+        "current_state_map": json.dumps(current_map, sort_keys=True),
+        "map_changed": bool(previous_map and previous_map != current_map),
+        "bull_component_changed": False,
+        "bear_component_changed": False,
+        "side_component_changed": False,
+        "transition_matrix_distance": np.nan,
+        "emission_mean_distance": np.nan,
+    }
+    if previous_fit is None:
+        return row
+
+    for state, output_name in {
+        STATE_BULL: "bull_component_changed",
+        STATE_BEAR: "bear_component_changed",
+        STATE_SIDE: "side_component_changed",
+    }.items():
+        row[output_name] = _state_components(previous_fit.state_map, state) != _state_components(
+            current_fit.state_map,
+            state,
+        )
+
+    previous_trans = np.asarray(previous_fit.model.transmat_, dtype=float)
+    current_trans = np.asarray(current_fit.model.transmat_, dtype=float)
+    if previous_trans.shape == current_trans.shape:
+        row["transition_matrix_distance"] = _safe_float(np.linalg.norm(current_trans - previous_trans))
+
+    previous_means = np.asarray(previous_fit.model.means_, dtype=float)
+    current_means = np.asarray(current_fit.model.means_, dtype=float)
+    if previous_means.shape == current_means.shape:
+        row["emission_mean_distance"] = _safe_float(np.linalg.norm(current_means - previous_means))
+
+    return row
 
 
 def summarize_states(backtest: pd.DataFrame, window_diagnostics: pd.DataFrame) -> pd.DataFrame:
