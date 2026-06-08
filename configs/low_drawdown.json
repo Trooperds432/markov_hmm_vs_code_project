@@ -1,0 +1,20 @@
+{
+  "ticker": "NVDA",
+  "benchmark": "QQQ",
+  "start": "2012-01-01",
+  "enable_hmm_model_selection": true,
+  "hmm_state_candidates": [3, 4, 5],
+  "hmm_covariance_candidates": ["diag", "full"],
+  "hmm_model_selection_metric": "validation_bic",
+  "min_bull_prob": 0.55,
+  "max_bear_prob_for_long": 0.3,
+  "min_signal": 0.12,
+  "base_exposure": 0.25,
+  "core_exposure": 0.4,
+  "max_exposure": 0.65,
+  "target_ann_vol": 0.16,
+  "dd_level_1": 0.07,
+  "dd_level_2": 0.15,
+  "dd_mult_1": 0.55,
+  "dd_mult_2": 0.25
+}
