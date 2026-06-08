@@ -6,3 +6,5 @@ hmmlearn>=0.3.0
 yfinance>=0.2.36
 statsmodels>=0.14
 pytest>=8.0
+ruff>=0.6.0
+black>=24.0
