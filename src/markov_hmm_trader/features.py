@@ -126,7 +126,10 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     }
 
     for name, values in feature_map.items():
-        out[name] = values.replace([np.inf, -np.inf], np.nan)
+        cleaned = values.replace([np.inf, -np.inf], np.nan)
+        if cleaned.notna().sum() == 0:
+            cleaned = cleaned.fillna(0.0)
+        out[name] = cleaned
 
     if cfg.use_extra_factor_features:
         market_col = "market_Close" if "market_Close" in out else "Benchmark_Close"

@@ -52,6 +52,6 @@ def test_semantic_probabilities_aggregates_many_components():
 
     semantic = semantic_probabilities(probs, state_map)
 
-    assert semantic.loc[0, STATE_BULL] == 0.30
+    assert round(semantic.loc[0, STATE_BULL], 6) == 0.30
     assert semantic.loc[0, STATE_BEAR] == 0.15
     assert semantic.loc[0, STATE_SIDE] == 0.55
