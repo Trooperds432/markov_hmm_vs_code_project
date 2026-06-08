@@ -77,8 +77,7 @@ def nn_predictions_frame(df: pd.DataFrame) -> pd.DataFrame:
     ]
     out = df[[column for column in columns if column in df]].copy()
     if "target_positive" in out and "nn_signal" in out:
-        out["prediction_correct"] = (
-            ((out["nn_signal"] > 0) & (out["target_positive"] == 1.0))
-            | ((out["nn_signal"] < 0) & (out["target_positive"] == 0.0))
+        out["prediction_correct"] = ((out["nn_signal"] > 0) & (out["target_positive"] == 1.0)) | (
+            (out["nn_signal"] < 0) & (out["target_positive"] == 0.0)
         )
     return out

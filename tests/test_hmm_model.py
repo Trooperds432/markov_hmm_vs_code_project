@@ -6,7 +6,10 @@ import numpy as np
 import pandas as pd
 
 from src.markov_hmm_trader.config import PipelineConfig
-from src.markov_hmm_trader.hmm_model import map_components_to_semantic_states, semantic_probabilities
+from src.markov_hmm_trader.hmm_model import (
+    map_components_to_semantic_states,
+    semantic_probabilities,
+)
 from src.markov_hmm_trader.states import STATE_BEAR, STATE_BULL, STATE_SIDE
 
 

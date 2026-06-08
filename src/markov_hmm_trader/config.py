@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, fields, replace
-from pathlib import Path
-from typing import Any, Optional, Tuple
 import hashlib
 import json
+from dataclasses import asdict, dataclass, field, fields, replace
+from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -13,7 +13,7 @@ class PipelineConfig:
     ticker: str = "NVDA"
     benchmark: str = "QQQ"
     start: str = "2012-01-01"
-    end: Optional[str] = None
+    end: str | None = None
     interval: str = "1d"
 
     # HMM
@@ -23,10 +23,10 @@ class PipelineConfig:
     n_iter: int = 500
     tolerance: float = 1e-4
     covariance_type: str = "full"
-    random_seeds: Tuple[int, ...] = (7, 13, 21, 42, 99, 123, 777)
+    random_seeds: tuple[int, ...] = (7, 13, 21, 42, 99, 123, 777)
     enable_hmm_model_selection: bool = False
-    hmm_state_candidates: Tuple[int, ...] = (3, 4, 5)
-    hmm_covariance_candidates: Tuple[str, ...] = ("diag", "full")
+    hmm_state_candidates: tuple[int, ...] = (3, 4, 5)
+    hmm_covariance_candidates: tuple[str, ...] = ("diag", "full")
     hmm_model_selection_metric: str = "validation_bic"
     hmm_validation_fraction: float = 0.20
     refit_selected_hmm_on_full_train: bool = True
@@ -78,22 +78,22 @@ class PipelineConfig:
     enable_diagnostics: bool = True
     enable_stress_tests: bool = True
     enable_benchmark: bool = False
-    stress_cost_multipliers: Tuple[float, ...] = (2.0, 3.0)
-    stress_execution_lag_bars: Tuple[int, ...] = (1, 2)
+    stress_cost_multipliers: tuple[float, ...] = (2.0, 3.0)
+    stress_execution_lag_bars: tuple[int, ...] = (1, 2)
     stress_bootstrap_paths: int = 200
     stress_bootstrap_block_size: int = 21
     stress_random_seed: int = 1234
     stress_asset_bootstrap_paths: int = 50
     stress_asset_bootstrap_block_size: int = 21
     stress_rerun_hmm_on_bootstrap: bool = True
-    stress_commission_bps_values: Tuple[float, ...] = (7.5, 15.0, 30.0)
-    stress_slippage_bps_values: Tuple[float, ...] = (3.0, 10.0, 25.0)
-    stress_missing_data_probabilities: Tuple[float, ...] = (0.01, 0.03, 0.05)
+    stress_commission_bps_values: tuple[float, ...] = (7.5, 15.0, 30.0)
+    stress_slippage_bps_values: tuple[float, ...] = (3.0, 10.0, 25.0)
+    stress_missing_data_probabilities: tuple[float, ...] = (0.01, 0.03, 0.05)
     custom_crisis_windows: dict[str, dict[str, str]] = field(default_factory=dict)
     benchmark_maxiter: int = 200
 
     # Universe and factor data
-    universe: Tuple[str, ...] = (
+    universe: tuple[str, ...] = (
         "SPY",
         "QQQ",
         "SMH",
@@ -137,7 +137,7 @@ class PipelineConfig:
     enable_nn_confirmation: bool = False
     nn_horizon_bars: int = 20
     nn_lookback_bars: int = 60
-    nn_hidden_sizes: Tuple[int, ...] = (64, 32)
+    nn_hidden_sizes: tuple[int, ...] = (64, 32)
     nn_dropout: float = 0.10
     nn_learning_rate: float = 0.001
     nn_epochs: int = 20
@@ -151,7 +151,7 @@ class PipelineConfig:
 
     # Portfolio construction
     portfolio_mode: bool = False
-    portfolio_symbols: Tuple[str, ...] = ("NVDA", "MSFT", "AAPL", "META", "AMZN", "AMD", "TSLA")
+    portfolio_symbols: tuple[str, ...] = ("NVDA", "MSFT", "AAPL", "META", "AMZN", "AMD", "TSLA")
     portfolio_benchmark: str = "QQQ"
     portfolio_max_positions: int = 5
     portfolio_max_weight_per_asset: float = 0.25
@@ -281,7 +281,8 @@ def apply_quick_mode(cfg: PipelineConfig) -> PipelineConfig:
         stress_bootstrap_paths=min(cfg.stress_bootstrap_paths, 25),
         stress_asset_bootstrap_paths=min(cfg.stress_asset_bootstrap_paths, 5),
         hmm_state_candidates=tuple(cfg.hmm_state_candidates[:1]) or (cfg.n_states,),
-        hmm_covariance_candidates=tuple(cfg.hmm_covariance_candidates[:1]) or (cfg.covariance_type,),
+        hmm_covariance_candidates=tuple(cfg.hmm_covariance_candidates[:1])
+        or (cfg.covariance_type,),
         nested_trials_per_window=min(cfg.nested_trials_per_window, 5),
         nn_epochs=min(cfg.nn_epochs, 3),
     )

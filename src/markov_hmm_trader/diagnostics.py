@@ -45,7 +45,9 @@ def make_window_diagnostic_row(
     transmat = np.asarray(model.transmat_, dtype=float)
     dwell = expected_dwell_times(transmat)
     semantic_components = {
-        state: [component for component, mapped_state in fit.state_map.items() if mapped_state == state]
+        state: [
+            component for component, mapped_state in fit.state_map.items() if mapped_state == state
+        ]
         for state in STATE_ORDER
     }
 
@@ -70,7 +72,8 @@ def make_window_diagnostic_row(
     for state, components in semantic_components.items():
         occupancy = sum(fit.component_occupancy.get(component, 0.0) for component in components)
         weighted_returns = [
-            fit.component_forward_returns.get(component, np.nan) * fit.component_occupancy.get(component, 0.0)
+            fit.component_forward_returns.get(component, np.nan)
+            * fit.component_occupancy.get(component, 0.0)
             for component in components
             if np.isfinite(fit.component_forward_returns.get(component, np.nan))
         ]
@@ -83,13 +86,19 @@ def make_window_diagnostic_row(
 
         row[f"{state}_components"] = "|".join(str(component) for component in components)
         row[f"{state}_occupancy"] = _safe_float(occupancy)
-        row[f"{state}_forward_return"] = _safe_float(sum(weighted_returns) / return_denom) if return_denom else np.nan
-        row[f"{state}_expected_dwell"] = _safe_float(np.mean(dwell_values)) if dwell_values else np.nan
+        row[f"{state}_forward_return"] = (
+            _safe_float(sum(weighted_returns) / return_denom) if return_denom else np.nan
+        )
+        row[f"{state}_expected_dwell"] = (
+            _safe_float(np.mean(dwell_values)) if dwell_values else np.nan
+        )
 
     return row
 
 
-def make_seed_diagnostic_rows(window_id: int, train_end: pd.Timestamp, fit: HMMFitResult) -> list[dict[str, Any]]:
+def make_seed_diagnostic_rows(
+    window_id: int, train_end: pd.Timestamp, fit: HMMFitResult
+) -> list[dict[str, Any]]:
     rows = []
     for item in fit.seed_diagnostics:
         rows.append(
@@ -168,7 +177,9 @@ def make_transition_matrix_row(
         "selected_n_states": int(fit.selected_n_states),
         "selected_covariance_type": fit.selected_covariance_type,
         "transition_matrix": json.dumps(np.asarray(fit.model.transmat_).round(8).tolist()),
-        "semantic_state_map": json.dumps({int(k): v for k, v in fit.state_map.items()}, sort_keys=True),
+        "semantic_state_map": json.dumps(
+            {int(k): v for k, v in fit.state_map.items()}, sort_keys=True
+        ),
     }
 
 
@@ -178,7 +189,9 @@ def make_state_stability_row(
     current_fit: HMMFitResult,
 ) -> dict[str, Any]:
     current_map = {int(k): v for k, v in current_fit.state_map.items()}
-    previous_map = {} if previous_fit is None else {int(k): v for k, v in previous_fit.state_map.items()}
+    previous_map = (
+        {} if previous_fit is None else {int(k): v for k, v in previous_fit.state_map.items()}
+    )
     row: dict[str, Any] = {
         "window_id": window_id,
         "previous_state_map": json.dumps(previous_map, sort_keys=True),
@@ -206,7 +219,9 @@ def make_state_stability_row(
     previous_trans = np.asarray(previous_fit.model.transmat_, dtype=float)
     current_trans = np.asarray(current_fit.model.transmat_, dtype=float)
     if previous_trans.shape == current_trans.shape:
-        row["transition_matrix_distance"] = _safe_float(np.linalg.norm(current_trans - previous_trans))
+        row["transition_matrix_distance"] = _safe_float(
+            np.linalg.norm(current_trans - previous_trans)
+        )
 
     previous_means = np.asarray(previous_fit.model.means_, dtype=float)
     current_means = np.asarray(current_fit.model.means_, dtype=float)
@@ -227,17 +242,27 @@ def summarize_states(backtest: pd.DataFrame, window_diagnostics: pd.DataFrame) -
             "decoded_rows": int(decoded_mask.sum()),
             "decoded_occupancy": _safe_float(decoded_mask.mean()),
             "avg_probability": _safe_float(prob.mean()),
-            "avg_asset_return_when_decoded": _safe_float(backtest.loc[decoded_mask, "ret_1"].mean()),
-            "avg_strategy_return_when_decoded": _safe_float(backtest.loc[decoded_mask, "strategy_ret"].mean()),
+            "avg_asset_return_when_decoded": _safe_float(
+                backtest.loc[decoded_mask, "ret_1"].mean()
+            ),
+            "avg_strategy_return_when_decoded": _safe_float(
+                backtest.loc[decoded_mask, "strategy_ret"].mean()
+            ),
         }
 
         if not window_diagnostics.empty:
             dwell_col = f"{state}_expected_dwell"
             fwd_col = f"{state}_forward_return"
             occ_col = f"{state}_occupancy"
-            row["avg_train_expected_dwell"] = _safe_float(window_diagnostics.get(dwell_col, pd.Series(dtype=float)).mean())
-            row["avg_train_forward_return"] = _safe_float(window_diagnostics.get(fwd_col, pd.Series(dtype=float)).mean())
-            row["avg_train_occupancy"] = _safe_float(window_diagnostics.get(occ_col, pd.Series(dtype=float)).mean())
+            row["avg_train_expected_dwell"] = _safe_float(
+                window_diagnostics.get(dwell_col, pd.Series(dtype=float)).mean()
+            )
+            row["avg_train_forward_return"] = _safe_float(
+                window_diagnostics.get(fwd_col, pd.Series(dtype=float)).mean()
+            )
+            row["avg_train_occupancy"] = _safe_float(
+                window_diagnostics.get(occ_col, pd.Series(dtype=float)).mean()
+            )
         else:
             row["avg_train_expected_dwell"] = np.nan
             row["avg_train_forward_return"] = np.nan

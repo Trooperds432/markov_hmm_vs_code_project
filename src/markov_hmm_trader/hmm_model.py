@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -25,12 +24,12 @@ class SeedFitDiagnostic:
 class HMMFitResult:
     model: GaussianHMM
     scaler: StandardScaler
-    state_map: Dict[int, str]
+    state_map: dict[int, str]
     best_seed: int
     train_log_likelihood: float
     seed_diagnostics: list[SeedFitDiagnostic]
-    component_forward_returns: Dict[int, float]
-    component_occupancy: Dict[int, float]
+    component_forward_returns: dict[int, float]
+    component_occupancy: dict[int, float]
     component_diagnostics: dict[int, dict[str, float]] = field(default_factory=dict)
     model_selection_rows: list[dict[str, object]] = field(default_factory=list)
     selected_n_states: int = 3
@@ -142,7 +141,7 @@ def map_components_to_semantic_states(
     train_df: pd.DataFrame,
     hidden_states: np.ndarray,
     cfg: PipelineConfig,
-) -> tuple[Dict[int, str], dict[int, dict[str, float]]]:
+) -> tuple[dict[int, str], dict[int, dict[str, float]]]:
     """Map raw HMM components into Bull/Bear/Sideways semantic states."""
     fwd_ret = train_df["ret_1"].shift(-1)
     min_occupancy = max(float(cfg.semantic_min_occupancy), 0.0)
@@ -151,7 +150,11 @@ def map_components_to_semantic_states(
     for component in range(model.n_components):
         mask = hidden_states == component
         component_returns = fwd_ret[mask].dropna()
-        trend = train_df.loc[mask, "alpha_score_long"].mean() if "alpha_score_long" in train_df else np.nan
+        trend = (
+            train_df.loc[mask, "alpha_score_long"].mean()
+            if "alpha_score_long" in train_df
+            else np.nan
+        )
         forward_return = float(component_returns.mean()) if not component_returns.empty else np.nan
         volatility = float(component_returns.std(ddof=0)) if len(component_returns) > 1 else np.nan
         drawdown = _component_drawdown(component_returns)
@@ -195,7 +198,7 @@ def map_components_to_semantic_states(
     high_cut = np.quantile(finite_returns, 0.60) if finite_returns.size else np.inf
     low_cut = np.quantile(finite_returns, 0.40) if finite_returns.size else -np.inf
 
-    state_map: Dict[int, str] = {}
+    state_map: dict[int, str] = {}
     for component in components:
         fwd = diagnostics[component]["forward_return"]
         occupancy = diagnostics[component]["occupancy"]
@@ -221,7 +224,7 @@ def map_components_to_semantic_states(
     return state_map, diagnostics
 
 
-def semantic_probabilities(probs_raw: np.ndarray, state_map: Dict[int, str]) -> pd.DataFrame:
+def semantic_probabilities(probs_raw: np.ndarray, state_map: dict[int, str]) -> pd.DataFrame:
     out = pd.DataFrame(0.0, index=np.arange(len(probs_raw)), columns=STATE_ORDER)
 
     for component, semantic_state in state_map.items():

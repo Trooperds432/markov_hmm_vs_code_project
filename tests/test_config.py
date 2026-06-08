@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from src.markov_hmm_trader.config import PipelineConfig, apply_profile, apply_quick_mode, config_hash
+from src.markov_hmm_trader.config import (
+    PipelineConfig,
+    apply_profile,
+    apply_quick_mode,
+    config_hash,
+)
 
 
 def test_profiles_apply_distinct_risk_defaults():

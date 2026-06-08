@@ -64,7 +64,9 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
         regime_mult = cfg.bear_regime_exposure_mult
 
     if cfg.use_vol_targeting and row["rv_realised"] > 0:
-        vol_mult = np.clip(cfg.target_ann_vol / row["rv_realised"], cfg.min_vol_mult, cfg.max_vol_mult)
+        vol_mult = np.clip(
+            cfg.target_ann_vol / row["rv_realised"], cfg.min_vol_mult, cfg.max_vol_mult
+        )
     else:
         vol_mult = 1.0
 
@@ -75,9 +77,7 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
     alpha_short = row["alpha_score_short"] >= cfg.min_alpha_score
 
     core_long = (
-        bool(row["trend_long"])
-        and bool(row["rs_long"])
-        and bear <= cfg.max_bear_prob_for_long
+        bool(row["trend_long"]) and bool(row["rs_long"]) and bear <= cfg.max_bear_prob_for_long
     )
 
     adaptive_long = (
@@ -98,11 +98,7 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
 
     short_exposure = 0.0
     if not cfg.long_only:
-        adaptive_short = (
-            bear >= cfg.min_bull_prob
-            and signal <= -cfg.min_signal
-            and alpha_short
-        )
+        adaptive_short = bear >= cfg.min_bull_prob and signal <= -cfg.min_signal and alpha_short
         if adaptive_short:
             short_exposure = -cfg.base_exposure * confidence_mult * vol_mult * dd_mult
 
@@ -136,10 +132,12 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
             f"but only have {len(df)} rows."
         )
 
-    for window_id, train_end in enumerate(range(start_idx, end_idx, cfg.retrain_frequency), start=1):
+    for window_id, train_end in enumerate(
+        range(start_idx, end_idx, cfg.retrain_frequency), start=1
+    ):
         test_end = min(train_end + cfg.retrain_frequency, end_idx)
 
-        train = df.iloc[train_end - cfg.train_window:train_end].copy()
+        train = df.iloc[train_end - cfg.train_window : train_end].copy()
         test = df.iloc[train_end:test_end].copy()
 
         try:

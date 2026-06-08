@@ -26,7 +26,9 @@ class PaperBroker(BrokerBase):
 
     def submit_order(self, symbol: str, quantity: float, price: float) -> dict[str, object]:
         order_id = f"PAPER-{next(self._ids)}"
-        fill_price = float(price) * (1.0 + self.slippage_bps / 10_000.0 * (1 if quantity > 0 else -1))
+        fill_price = float(price) * (
+            1.0 + self.slippage_bps / 10_000.0 * (1 if quantity > 0 else -1)
+        )
         notional = float(quantity) * fill_price
         self.cash -= notional
         self.positions[symbol] = self.positions.get(symbol, 0.0) + float(quantity)

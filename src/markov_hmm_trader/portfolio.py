@@ -8,7 +8,7 @@ import pandas as pd
 from .config import PipelineConfig
 from .data import load_market_data
 from .features import make_features
-from .metrics import cagr, max_drawdown, sharpe, turnover
+from .metrics import cagr, max_drawdown, sharpe
 from .runner import run_single
 from .states import STATE_BEAR, STATE_BULL
 
@@ -88,7 +88,9 @@ def run_portfolio(cfg: PipelineConfig, output_dir) -> dict[str, pd.DataFrame | p
             "portfolio_asset_signals": pd.DataFrame(signal_rows),
         }
 
-    returns = pd.DataFrame({symbol: bt["ret_1"] for symbol, bt in asset_backtests.items()}).dropna(how="all")
+    returns = pd.DataFrame({symbol: bt["ret_1"] for symbol, bt in asset_backtests.items()}).dropna(
+        how="all"
+    )
     scores = pd.DataFrame(
         {
             symbol: bt[STATE_BULL].fillna(0.0) - bt[STATE_BEAR].fillna(0.0)
@@ -144,7 +146,9 @@ def run_portfolio(cfg: PipelineConfig, output_dir) -> dict[str, pd.DataFrame | p
     weights.to_csv(output_dir / "portfolio_weights.csv")
     trades.to_csv(output_dir / "portfolio_trades.csv")
     stats.to_frame("value").to_csv(output_dir / "portfolio_stats.csv")
-    outputs["portfolio_asset_signals"].to_csv(output_dir / "portfolio_asset_signals.csv", index=False)
+    outputs["portfolio_asset_signals"].to_csv(
+        output_dir / "portfolio_asset_signals.csv", index=False
+    )
     return outputs
 
 

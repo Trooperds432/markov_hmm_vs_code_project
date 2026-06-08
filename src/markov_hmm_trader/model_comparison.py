@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 from sklearn.mixture import GaussianMixture
 
@@ -9,7 +8,9 @@ from .config import PipelineConfig
 from .metrics import add_backtest_metric_columns, make_report
 
 
-def _baseline_strategy(df: pd.DataFrame, name: str, position: pd.Series, cfg: PipelineConfig) -> dict[str, object]:
+def _baseline_strategy(
+    df: pd.DataFrame, name: str, position: pd.Series, cfg: PipelineConfig
+) -> dict[str, object]:
     out = df.copy()
     out["position"] = position.reindex(out.index).fillna(0.0)
     out["strategy_ret"] = out["position"].shift(1).fillna(0.0) * out["ret_1"].fillna(0.0)

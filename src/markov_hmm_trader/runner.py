@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 from dataclasses import asdict, replace
+from pathlib import Path
 
 import pandas as pd
 
-from .benchmark import run_markov_regression_benchmark
 from .backtest import walk_forward_backtest
+from .benchmark import run_markov_regression_benchmark
 from .config import PipelineConfig
 from .data import factor_data_coverage, load_market_data
 from .diagnostics import summarize_states
@@ -34,7 +34,9 @@ def run_single(
 ) -> tuple[pd.DataFrame, pd.Series]:
     diagnostics_enabled = cfg.enable_diagnostics if write_diagnostics is None else write_diagnostics
     stress_enabled = cfg.enable_stress_tests if write_stress is None else write_stress
-    run_cfg = replace(cfg, enable_diagnostics=diagnostics_enabled, enable_stress_tests=stress_enabled)
+    run_cfg = replace(
+        cfg, enable_diagnostics=diagnostics_enabled, enable_stress_tests=stress_enabled
+    )
     experiment_dir = start_experiment_run(run_cfg, output_dir)
 
     print(f"Loading data for {cfg.ticker} vs {cfg.benchmark}...")
@@ -60,7 +62,9 @@ def run_single(
         feature_summary(features, run_cfg).to_csv(output_dir / "feature_summary.csv", index=False)
         result.window_diagnostics.to_csv(output_dir / "window_diagnostics.csv", index=False)
         result.seed_diagnostics.to_csv(output_dir / "seed_diagnostics.csv", index=False)
-        summarize_states(backtest, result.window_diagnostics).to_csv(output_dir / "state_summary.csv", index=False)
+        summarize_states(backtest, result.window_diagnostics).to_csv(
+            output_dir / "state_summary.csv", index=False
+        )
         result.hmm_model_selection.to_csv(output_dir / "hmm_model_selection.csv", index=False)
         result.hmm_emissions.to_csv(output_dir / "hmm_emissions.csv", index=False)
         result.hmm_transition_matrices.to_csv(
@@ -107,7 +111,9 @@ def run_single(
         latest_model = result.hmm_transition_matrices.iloc[-1]
         selected_model = {
             "selected_n_states": latest_model.get("selected_n_states", run_cfg.n_states),
-            "covariance_type": latest_model.get("selected_covariance_type", run_cfg.covariance_type),
+            "covariance_type": latest_model.get(
+                "selected_covariance_type", run_cfg.covariance_type
+            ),
         }
     finalize_experiment_run(run_cfg, experiment_dir, output_dir, stats, selected_model)
     return backtest, stats
@@ -157,7 +163,9 @@ def run_portfolio_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool =
         print(stats.to_string())
 
 
-def run_model_comparison_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool = False) -> None:
+def run_model_comparison_mode(
+    cfg: PipelineConfig, output_dir: Path, make_plots: bool = False
+) -> None:
     from .model_comparison import run_model_comparison
 
     print("Loading data for model comparison...")

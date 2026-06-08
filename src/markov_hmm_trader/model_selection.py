@@ -47,7 +47,9 @@ def hmm_num_parameters(n_states: int, n_features: int, covariance_type: str) -> 
     return int(start_probs + transition_probs + means + covariances)
 
 
-def information_criteria(log_likelihood: float, n_parameters: int, n_obs: int) -> tuple[float, float]:
+def information_criteria(
+    log_likelihood: float, n_parameters: int, n_obs: int
+) -> tuple[float, float]:
     if not np.isfinite(log_likelihood) or n_obs <= 0:
         return np.nan, np.nan
     aic = 2.0 * n_parameters - 2.0 * log_likelihood
@@ -74,7 +76,9 @@ def _validation_sharpe_proxy(
     X_val = scaler.transform(validation[features].values)
     probs = semantic_probabilities(model.predict_proba(X_val) @ model.transmat_, state_map)
     signal = (probs[STATE_BULL] - probs[STATE_BEAR]).clip(-1.0, 1.0)
-    proxy_returns = signal.shift(1).fillna(0.0).to_numpy() * validation["ret_1"].fillna(0.0).to_numpy()
+    proxy_returns = (
+        signal.shift(1).fillna(0.0).to_numpy() * validation["ret_1"].fillna(0.0).to_numpy()
+    )
     std = float(np.std(proxy_returns))
     if std == 0.0 or np.isnan(std):
         return np.nan

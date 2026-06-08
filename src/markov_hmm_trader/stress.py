@@ -8,7 +8,6 @@ import pandas as pd
 from .config import PipelineConfig
 from .metrics import cagr, max_drawdown, sharpe
 
-
 CRISIS_WINDOWS = {
     "dotcom_2000": ("2000-03-01", "2002-10-31"),
     "global_financial_crisis_2008": ("2007-10-01", "2009-03-31"),
@@ -36,7 +35,7 @@ def replay_positions(
     equity_curve = []
     strategy_returns = []
 
-    for asset_ret, target_pos in zip(out["ret_1"].fillna(0.0), target):
+    for asset_ret, target_pos in zip(out["ret_1"].fillna(0.0), target, strict=False):
         turnover = abs(float(target_pos) - prev_pos)
         strategy_ret = prev_pos * float(asset_ret) - turnover * cost_rate
         equity *= 1.0 + strategy_ret
@@ -79,7 +78,9 @@ def _summary_from_returns(
     }
 
 
-def _scenario_summary(scenario: str, replay: pd.DataFrame, cfg: PipelineConfig) -> dict[str, float | int | str]:
+def _scenario_summary(
+    scenario: str, replay: pd.DataFrame, cfg: PipelineConfig
+) -> dict[str, float | int | str]:
     return _summary_from_returns(scenario, replay["strategy_ret"], cfg, rows=len(replay))
 
 
@@ -151,7 +152,11 @@ def make_stress_tests(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     for name, (start, end) in CRISIS_WINDOWS.items():
         subset = df.loc[start:end]
         if len(subset) >= min_crisis_rows:
-            rows.append(_summary_from_returns(f"crisis_{name}", subset["strategy_ret"], cfg, rows=len(subset)))
+            rows.append(
+                _summary_from_returns(
+                    f"crisis_{name}", subset["strategy_ret"], cfg, rows=len(subset)
+                )
+            )
 
     return pd.DataFrame(rows)
 
@@ -203,7 +208,9 @@ def make_asset_bootstrap_stress(df: pd.DataFrame, cfg: PipelineConfig) -> pd.Dat
     )
     for path_id, path_returns in enumerate(bootstrapped, start=1):
         try:
-            if cfg.stress_rerun_hmm_on_bootstrap and {"Open", "High", "Low", "Close"}.issubset(df.columns):
+            if cfg.stress_rerun_hmm_on_bootstrap and {"Open", "High", "Low", "Close"}.issubset(
+                df.columns
+            ):
                 from .backtest import walk_forward_backtest
                 from .features import make_features
 

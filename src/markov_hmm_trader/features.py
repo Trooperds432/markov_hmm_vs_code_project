@@ -101,7 +101,9 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     out["atr_rank"] = percent_rank(out["atr_pct"], 120)
 
     out["rv_20"] = out["ret_1"].rolling(20).std(ddof=0) * np.sqrt(cfg.bars_per_year)
-    out["rv_realised"] = out["ret_1"].rolling(cfg.vol_lookback).std(ddof=0) * np.sqrt(cfg.bars_per_year)
+    out["rv_realised"] = out["ret_1"].rolling(cfg.vol_lookback).std(ddof=0) * np.sqrt(
+        cfg.bars_per_year
+    )
 
     out["vol_z"] = zscore(np.log(out["Volume"].replace(0, np.nan)), 60)
 
@@ -136,9 +138,7 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
         sector_col = (
             "semiconductors_Close"
             if "semiconductors_Close" in out
-            else "tech_Close"
-            if "tech_Close" in out
-            else "Benchmark_Close"
+            else "tech_Close" if "tech_Close" in out else "Benchmark_Close"
         )
 
         out["market_ret_1"] = _log_return_from_close(out, market_col, 1)
@@ -147,7 +147,9 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
         out["asset_vs_market_20"] = out["ret_20"] - out["market_ret_20"]
         out["asset_vs_sector_20"] = out["ret_20"] - out["sector_ret_20"]
         out["vix_change_5"] = _log_return_from_close(out, "volatility_proxy_Close", 5)
-        out["vix_level_z"] = zscore(out.get("volatility_proxy_Close", pd.Series(index=out.index)), 120)
+        out["vix_level_z"] = zscore(
+            out.get("volatility_proxy_Close", pd.Series(index=out.index)), 120
+        )
         out["rates_ret_20"] = _log_return_from_close(out, "rates_proxy_Close", 20)
         out["credit_ret_20"] = _log_return_from_close(out, "credit_proxy_Close", 20)
         out["dollar_ret_20"] = _log_return_from_close(out, "dollar_proxy_Close", 20)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict, replace
 import json
+from dataclasses import asdict, replace
 
 import numpy as np
 import pandas as pd
@@ -106,7 +106,9 @@ def run_nested_optimisation(cfg: PipelineConfig, output_dir) -> dict[str, pd.Dat
         for candidate_id, candidate_cfg in enumerate(candidate_configs(cfg), start=1):
             try:
                 backtest, stats = _run_slice(train_val, candidate_cfg)
-                validation_stats = make_report(backtest.reindex(validation.index).dropna(), candidate_cfg)
+                validation_stats = make_report(
+                    backtest.reindex(validation.index).dropna(), candidate_cfg
+                )
                 validation_score = score_stats(validation_stats, cfg.nested_objective)
             except Exception as err:
                 validation_score = -np.inf

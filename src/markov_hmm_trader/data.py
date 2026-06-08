@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -9,7 +7,7 @@ import yfinance as yf
 from .config import PipelineConfig
 
 
-def download_ohlcv(symbol: str, start: str, end: Optional[str], interval: str) -> pd.DataFrame:
+def download_ohlcv(symbol: str, start: str, end: str | None, interval: str) -> pd.DataFrame:
     data = yf.download(
         symbol,
         start=start,
@@ -36,7 +34,9 @@ def download_ohlcv(symbol: str, start: str, end: Optional[str], interval: str) -
     return data.dropna()
 
 
-def _coverage_row(symbol: str, name: str, data: pd.DataFrame | None, error: str = "") -> dict[str, object]:
+def _coverage_row(
+    symbol: str, name: str, data: pd.DataFrame | None, error: str = ""
+) -> dict[str, object]:
     if data is None or data.empty:
         return {
             "symbol": symbol,
@@ -89,14 +89,16 @@ def load_market_data(cfg: PipelineConfig) -> pd.DataFrame:
             df[column] = df[column].ffill(limit=max(int(cfg.factor_ffill_limit), 0))
 
     if df.empty:
-        raise ValueError("Joined asset/benchmark data is empty. Check ticker, benchmark, and date range.")
+        raise ValueError(
+            "Joined asset/benchmark data is empty. Check ticker, benchmark, and date range."
+        )
 
     if cfg.use_extra_factor_features:
         required = ["Open", "High", "Low", "Close", "Volume", "Benchmark_Close"]
         out = df.dropna(subset=required).copy()
     else:
         out = df.dropna().copy()
-    out.attrs["factor_data_coverage"] = pd.DataFrame(coverage_rows)
+    out.attrs["factor_data_coverage"] = coverage_rows
     return out
 
 
@@ -104,4 +106,6 @@ def factor_data_coverage(df: pd.DataFrame) -> pd.DataFrame:
     coverage = df.attrs.get("factor_data_coverage")
     if isinstance(coverage, pd.DataFrame):
         return coverage.copy()
+    if isinstance(coverage, list):
+        return pd.DataFrame(coverage)
     return pd.DataFrame()

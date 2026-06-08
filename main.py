@@ -23,12 +23,18 @@ OUTPUT_DIR = Path("outputs")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the Markov/HMM trading research pipeline.")
-    parser.add_argument("--config", type=Path, default=CONFIG_PATH, help="Path to a JSON config file.")
-    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR, help="Directory for generated reports.")
+    parser.add_argument(
+        "--config", type=Path, default=CONFIG_PATH, help="Path to a JSON config file."
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, default=OUTPUT_DIR, help="Directory for generated reports."
+    )
     plot_group = parser.add_mutually_exclusive_group()
     plot_group.add_argument("--no-plots", action="store_true", help="Skip PNG plot generation.")
     plot_group.add_argument("--plots", action="store_true", help="Force PNG plot generation.")
-    parser.add_argument("--no-diagnostics", action="store_true", help="Skip HMM diagnostics CSV outputs.")
+    parser.add_argument(
+        "--no-diagnostics", action="store_true", help="Skip HMM diagnostics CSV outputs."
+    )
     parser.add_argument("--no-stress", action="store_true", help="Skip stress-test CSV outputs.")
     parser.add_argument("--universe", action="store_true", help="Run the configured universe list.")
     parser.add_argument(
@@ -40,11 +46,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--benchmark", help="Override the configured benchmark.")
     parser.add_argument("--start", help="Override the configured start date.")
     parser.add_argument("--end", help="Override the configured end date.")
-    parser.add_argument("--quick", action="store_true", help="Use a lighter debugging configuration.")
-    parser.add_argument("--nested", action="store_true", help="Run nested walk-forward optimisation.")
+    parser.add_argument(
+        "--quick", action="store_true", help="Use a lighter debugging configuration."
+    )
+    parser.add_argument(
+        "--nested", action="store_true", help="Run nested walk-forward optimisation."
+    )
     parser.add_argument("--portfolio", action="store_true", help="Run portfolio construction mode.")
     parser.add_argument("--compare-models", action="store_true", help="Run model comparison mode.")
-    parser.add_argument("--paper", action="store_true", help="Run simulation-only paper trading mode.")
+    parser.add_argument(
+        "--paper", action="store_true", help="Run simulation-only paper trading mode."
+    )
     return parser.parse_args()
 
 
@@ -64,7 +76,9 @@ def main() -> None:
 
     mode_flags = [args.universe, args.nested, args.portfolio, args.compare_models, args.paper]
     if sum(bool(flag) for flag in mode_flags) > 1:
-        raise SystemExit("Choose only one run mode: --universe, --nested, --portfolio, --compare-models, or --paper.")
+        raise SystemExit(
+            "Choose only one run mode: --universe, --nested, --portfolio, --compare-models, or --paper."
+        )
 
     args.output_dir.mkdir(exist_ok=True)
     make_plots = args.plots or (not args.no_plots and not args.quick)
