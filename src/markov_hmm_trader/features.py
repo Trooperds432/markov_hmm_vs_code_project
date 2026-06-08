@@ -183,7 +183,17 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     out["alpha_score_short"] += (out["ema_slope"] < 0).astype(int)
     out["alpha_score_short"] += out["atr_rank"].between(0.08, 0.96).astype(int)
 
-    return out.replace([np.inf, -np.inf], np.nan).dropna().copy()
+    required_columns = feature_columns(cfg) + [
+        "ret_1",
+        "rv_realised",
+        "trend_long",
+        "trend_short",
+        "rs_long",
+        "rs_short",
+        "alpha_score_long",
+        "alpha_score_short",
+    ]
+    return out.replace([np.inf, -np.inf], np.nan).dropna(subset=required_columns).copy()
 
 
 def feature_summary(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
