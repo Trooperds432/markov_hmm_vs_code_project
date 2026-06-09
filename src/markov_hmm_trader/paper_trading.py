@@ -46,8 +46,14 @@ def run_paper_simulation(
                 "action": orders[-1]["action"],
                 "fill_price": order.get("fill_price", latest["Close"]),
                 "fill_qty": order.get("quantity", 0.0),
-                "commission": abs(float(order.get("quantity", 0.0))) * float(latest["Close"]) * cfg.paper_commission_bps / 10_000.0,
-                "slippage": abs(float(order.get("quantity", 0.0))) * float(latest["Close"]) * cfg.paper_slippage_bps / 10_000.0,
+                "commission": abs(float(order.get("quantity", 0.0)))
+                * float(latest["Close"])
+                * cfg.paper_commission_bps
+                / 10_000.0,
+                "slippage": abs(float(order.get("quantity", 0.0)))
+                * float(latest["Close"])
+                * cfg.paper_slippage_bps
+                / 10_000.0,
             }
         )
     else:
@@ -95,5 +101,7 @@ def run_paper_simulation(
             ]
         ),
         "paper_risk_checks": checks,
-        "paper_order_status": orders_frame([broker.get_order_status(order_id) for order_id in broker.orders]),
+        "paper_order_status": orders_frame(
+            [broker.get_order_status(order_id) for order_id in broker.orders]
+        ),
     }

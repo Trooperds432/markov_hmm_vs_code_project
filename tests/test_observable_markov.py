@@ -18,7 +18,9 @@ def test_observable_markov_transition_and_stationary_sum():
     dates = pd.bdate_range("2020-01-01", periods=80)
     returns = pd.Series(np.r_[np.full(40, 0.002), np.full(40, -0.002)], index=dates)
     df = pd.DataFrame({"ret_1": returns, "Close": 100 * np.exp(returns.cumsum())}, index=dates)
-    cfg = PipelineConfig(observable_label_window=5, observable_bull_threshold=0.005, observable_bear_threshold=-0.005)
+    cfg = PipelineConfig(
+        observable_label_window=5, observable_bull_threshold=0.005, observable_bear_threshold=-0.005
+    )
 
     labels = label_observable_states(df, cfg)
     matrix = transition_matrix(labels)

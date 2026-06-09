@@ -11,8 +11,8 @@ from .diagnostics import (
     make_decode_comparison_rows,
     make_emission_diagnostic_rows,
     make_seed_diagnostic_rows,
-    make_stationary_distribution_rows,
     make_state_stability_row,
+    make_stationary_distribution_rows,
     make_synthetic_sample_stress,
     make_transition_matrix_row,
     make_window_diagnostic_row,
@@ -196,9 +196,7 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
                     fit,
                 )
             )
-            component_diagnostic_rows.extend(
-                make_component_diagnostic_rows(window_id, train, fit)
-            )
+            component_diagnostic_rows.extend(make_component_diagnostic_rows(window_id, train, fit))
             stability_rows.append(make_state_stability_row(window_id, previous_fit, fit))
             fits_for_sample.append((window_id, fit))
             previous_fit = fit

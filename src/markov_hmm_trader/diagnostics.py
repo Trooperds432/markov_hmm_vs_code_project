@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .hmm_model import HMMFitResult, component_covariance, component_mean, semantic_probabilities
+from .hmm_model import HMMFitResult, component_covariance, component_mean
 from .states import STATE_BEAR, STATE_BULL, STATE_ORDER, STATE_SIDE
 
 
@@ -189,7 +189,9 @@ def make_emission_diagnostic_rows(
             "model_type": fit.selected_model_type,
             "covariance_type": fit.selected_covariance_type,
             "occupancy": _safe_float(fit.component_occupancy.get(component, np.nan)),
-            "stationary_probability": _safe_float(stationary_distribution(fit).get(component, np.nan)),
+            "stationary_probability": _safe_float(
+                stationary_distribution(fit).get(component, np.nan)
+            ),
             "forward_return": _safe_float(fit.component_forward_returns.get(component, np.nan)),
             "expected_dwell": _safe_float(dwell.get(component, np.nan)),
             "covariance_trace": _safe_float(np.trace(covariance)),
@@ -249,11 +251,17 @@ def make_stationary_distribution_rows(window_id: int, fit: HMMFitResult) -> list
     ]
 
 
-def make_component_diagnostic_rows(window_id: int, train: pd.DataFrame, fit: HMMFitResult) -> list[dict[str, Any]]:
+def make_component_diagnostic_rows(
+    window_id: int, train: pd.DataFrame, fit: HMMFitResult
+) -> list[dict[str, Any]]:
     rows = []
     stationary = stationary_distribution(fit)
     dwell = expected_dwell_times(np.asarray(fit.model.transmat_, dtype=float))
-    hidden = fit.model.predict(fit.scaler.transform(train[fit.feature_names].values)) if hasattr(fit, "feature_names") else None
+    hidden = (
+        fit.model.predict(fit.scaler.transform(train[fit.feature_names].values))
+        if hasattr(fit, "feature_names")
+        else None
+    )
     for component, stats in fit.component_diagnostics.items():
         state_returns = train["ret_1"].shift(-1)
         if hidden is not None:
@@ -277,7 +285,9 @@ def make_component_diagnostic_rows(window_id: int, train: pd.DataFrame, fit: HMM
             "expected_dwell": _safe_float(dwell.get(component, np.nan)),
             "trend_alignment": _safe_float(stats.get("trend_score", np.nan)),
             "bull_score": _safe_float(stats.get("bull_score", stats.get("semantic_score", np.nan))),
-            "bear_score": _safe_float(stats.get("bear_score", -stats.get("semantic_score", np.nan))),
+            "bear_score": _safe_float(
+                stats.get("bear_score", -stats.get("semantic_score", np.nan))
+            ),
             "sideways_score": _safe_float(stats.get("sideways_score", np.nan)),
         }
         rows.append(row)
@@ -328,7 +338,10 @@ def make_synthetic_sample_stress(
                 _, states = fit.model.sample(length, random_state=fit.best_seed + path_id)
                 semantic = [fit.state_map.get(int(state), STATE_SIDE) for state in states]
                 signal = np.array(
-                    [1.0 if state == STATE_BULL else -1.0 if state == STATE_BEAR else 0.0 for state in semantic]
+                    [
+                        1.0 if state == STATE_BULL else -1.0 if state == STATE_BEAR else 0.0
+                        for state in semantic
+                    ]
                 )
                 rows.append(
                     {
@@ -337,16 +350,26 @@ def make_synthetic_sample_stress(
                         "bull_occupancy": float(np.mean(np.array(semantic) == STATE_BULL)),
                         "bear_occupancy": float(np.mean(np.array(semantic) == STATE_BEAR)),
                         "sideways_occupancy": float(np.mean(np.array(semantic) == STATE_SIDE)),
-                        "transition_count": int(np.sum(np.asarray(states[1:]) != np.asarray(states[:-1]))),
-                        "turnover_proxy": float(np.mean(np.abs(np.diff(signal)))) if len(signal) > 1 else 0.0,
+                        "transition_count": int(
+                            np.sum(np.asarray(states[1:]) != np.asarray(states[:-1]))
+                        ),
+                        "turnover_proxy": (
+                            float(np.mean(np.abs(np.diff(signal)))) if len(signal) > 1 else 0.0
+                        ),
                         "synthetic_signal_mean": float(signal.mean()),
                         "synthetic_signal_std": float(signal.std(ddof=0)),
-                        "synthetic_outcome_proxy": float(signal.mean() / (signal.std(ddof=0) + 1e-12)),
-                        "synthetic_drawdown_proxy": float(np.minimum.accumulate(np.cumsum(signal)).min()),
+                        "synthetic_outcome_proxy": float(
+                            signal.mean() / (signal.std(ddof=0) + 1e-12)
+                        ),
+                        "synthetic_drawdown_proxy": float(
+                            np.minimum.accumulate(np.cumsum(signal)).min()
+                        ),
                     }
                 )
             except Exception as err:
-                rows.append({"model_id": window_id, "path_id": path_id, "error": type(err).__name__})
+                rows.append(
+                    {"model_id": window_id, "path_id": path_id, "error": type(err).__name__}
+                )
     stress = pd.DataFrame(rows)
     if stress.empty:
         return stress, pd.DataFrame()

@@ -12,8 +12,8 @@ from .data import factor_data_coverage, load_market_data
 from .diagnostics import summarize_states
 from .ensemble import ensemble_diagnostics
 from .experiment import finalize_experiment_run, start_experiment_run
-from .forecast_benchmarks import run_forecast_benchmarks
 from .features import feature_summary, make_features
+from .forecast_benchmarks import run_forecast_benchmarks
 from .metrics import add_backtest_metric_columns, make_report
 from .nn_model import nn_predictions_frame, nn_training_metrics_frame
 from .observable_markov import run_observable_markov
@@ -98,7 +98,9 @@ def run_single(
         nn_predictions = nn_predictions_frame(backtest)
         nn_predictions["ticker"] = run_cfg.ticker
         nn_predictions.to_csv(output_dir / "nn_predictions.csv", index=False)
-        nn_training_metrics_frame(run_cfg).to_csv(output_dir / "nn_training_metrics.csv", index=False)
+        nn_training_metrics_frame(run_cfg).to_csv(
+            output_dir / "nn_training_metrics.csv", index=False
+        )
         ensemble_frame = ensemble_diagnostics(backtest)
         ensemble_frame.to_csv(output_dir / "ensemble_diagnostics.csv", index=False)
         ensemble_frame.to_csv(output_dir / "ensemble_predictions.csv", index=False)
@@ -204,7 +206,9 @@ def run_portfolio_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool =
     from .portfolio import run_portfolio
 
     print("Running portfolio construction mode...")
-    outputs = run_portfolio(replace(cfg, portfolio_enabled=True, portfolio_mode="top_k"), output_dir)
+    outputs = run_portfolio(
+        replace(cfg, portfolio_enabled=True, portfolio_mode="top_k"), output_dir
+    )
     stats = outputs["portfolio_stats"]
     if isinstance(stats, pd.Series):
         print(stats.to_string())

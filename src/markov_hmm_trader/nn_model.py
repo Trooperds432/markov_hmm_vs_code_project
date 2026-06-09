@@ -126,7 +126,9 @@ def nn_training_metrics_frame(cfg: PipelineConfig) -> pd.DataFrame:
                 "best_epoch": 0,
                 "early_stop_triggered": False,
                 "model_type": cfg.nn_model_type,
-                "error": "" if not cfg.enable_nn_confirmation or torch_available() else "torch_missing",
+                "error": (
+                    "" if not cfg.enable_nn_confirmation or torch_available() else "torch_missing"
+                ),
             }
         ]
     )

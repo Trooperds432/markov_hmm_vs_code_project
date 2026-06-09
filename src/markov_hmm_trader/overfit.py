@@ -5,7 +5,6 @@ import pandas as pd
 
 from .config import PipelineConfig
 
-
 OVERFIT_COLUMNS = [
     "model_family",
     "candidate_id",

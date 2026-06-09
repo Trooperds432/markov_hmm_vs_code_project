@@ -56,7 +56,9 @@ def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, 
             predictions["error"] = ""
             error = ""
 
-        realised = df["ret_1"].rolling(cfg.forecast_horizon_bars).sum().shift(-cfg.forecast_horizon_bars)
+        realised = (
+            df["ret_1"].rolling(cfg.forecast_horizon_bars).sum().shift(-cfg.forecast_horizon_bars)
+        )
         metric = float((predictions["forecast_mean"].reindex(df.index) - realised).abs().mean())
         prediction_frames.append(predictions)
         comparison_rows.append(

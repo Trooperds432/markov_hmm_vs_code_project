@@ -4,7 +4,6 @@ import importlib.util
 
 import pandas as pd
 
-
 DEPENDENCIES = {
     "hmmlearn": "hmmlearn",
     "statsforecast": "statsforecast",

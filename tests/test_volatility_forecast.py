@@ -33,6 +33,8 @@ def test_volatility_forecast_contract_and_multiplier_bounds():
 
     output = run_volatility_forecasts(df, cfg)
 
-    assert {"date", "vol_model", "forecast_sigma", "vol_risk_multiplier", "error"}.issubset(output.columns)
+    assert {"date", "vol_model", "forecast_sigma", "vol_risk_multiplier", "error"}.issubset(
+        output.columns
+    )
     assert output["vol_risk_multiplier"].between(0.0, 1.0).all()
     assert set(output["vol_model"]) == {"realised_vol", "ewma_vol", "garch", "arch"}
