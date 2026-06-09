@@ -1,0 +1,22 @@
+{
+  "ticker": "NVDA",
+  "benchmark": "QQQ",
+  "start": "2020-01-01",
+  "end": "2024-12-31",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 10,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_hmm_model_selection": false,
+  "portfolio_enabled": true,
+  "portfolio_mode": "top_k",
+  "portfolio_symbols": ["NVDA", "MSFT", "AAPL"],
+  "portfolio_benchmark": "QQQ",
+  "portfolio_max_positions": 2,
+  "portfolio_max_weight_per_asset": 0.35,
+  "portfolio_cash_buffer": 0.05,
+  "portfolio_weighting_method": "score_vol_inverse",
+  "enable_experiment_tracking": false,
+  "enable_stress_tests": false
+}

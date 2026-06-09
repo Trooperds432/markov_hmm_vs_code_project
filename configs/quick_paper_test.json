@@ -1,0 +1,17 @@
+{
+  "ticker": "NVDA",
+  "benchmark": "QQQ",
+  "start": "2020-01-01",
+  "end": "2024-12-31",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 10,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_hmm_model_selection": false,
+  "enable_paper_trading": true,
+  "paper_initial_cash": 100000.0,
+  "paper_model_registry_required": true,
+  "enable_experiment_tracking": false,
+  "enable_stress_tests": false
+}

@@ -1,0 +1,19 @@
+{
+  "ticker": "NVDA",
+  "benchmark": "QQQ",
+  "start": "2019-01-01",
+  "end": "2024-12-31",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 10,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_hmm_model_selection": false,
+  "outer_train_years": 2,
+  "outer_validation_years": 1,
+  "outer_test_years": 1,
+  "outer_step_years": 1,
+  "nested_trials_per_window": 3,
+  "enable_experiment_tracking": false,
+  "enable_stress_tests": false
+}
