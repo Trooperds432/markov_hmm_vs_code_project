@@ -10,14 +10,4 @@ DEPENDENCY_GROUPS = {
     "statsforecast": "Optional statistical forecast benchmarks and GARCH/ARCH models",
     "torch": "Optional neural-network confirmation",
     "statsmodels": "Optional MarkovRegression benchmark",
-    "yfinance": "Market data download",
-}
-
-
-def dependency_health_frame() -> pd.DataFrame:
-    rows = []
-    for package, purpose in DEPENDENCY_GROUPS.items():
-        rows.append(
-            {
-                "package": package,
-                "available
+    "yfinance": "Market data
