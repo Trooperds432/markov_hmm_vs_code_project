@@ -58,7 +58,9 @@ def run_single(
 
     output_dir.mkdir(exist_ok=True)
     backtest.to_csv(output_dir / "equity_curve.csv")
-    stats.to_frame("value").to_csv(output_dir / "stats.csv")
+    stats.rename_axis("metric").to_frame("value").reset_index().to_csv(
+        output_dir / "stats.csv", index=False
+    )
 
     if diagnostics_enabled:
         print("Saving diagnostics...")

@@ -18,6 +18,18 @@ Optional neural-network experiments require:
 pip install -r requirements-ml.txt
 ```
 
+Optional forecast benchmarks require:
+
+```bash
+pip install -r requirements-forecast.txt
+```
+
+Check optional dependency health:
+
+```bash
+python main.py --check-deps
+```
+
 ## Quick Start
 
 Default single-symbol run:
@@ -46,6 +58,7 @@ Core flags:
 - `--ticker`, `--benchmark`, `--start`, `--end`: override config values
 - `--profile`: `balanced`, `aggressive_growth`, or `low_drawdown`
 - `--quick`: fewer seeds/iterations/bootstrap paths and no plots unless `--plots`
+- `--check-deps`: print availability for `hmmlearn`, `statsforecast`, `torch`, `statsmodels`, and `yfinance`
 
 Research modes:
 
@@ -72,9 +85,15 @@ Diagnostics:
 - `hmm_emissions.csv`: component emissions, covariance summaries, occupancy, dwell time
 - `hmm_transition_matrices.csv`: selected transition matrices and semantic maps
 - `hmm_state_stability.csv`: semantic map changes and transition/emission distances
+- `hmm_stationary_distribution.csv`: component stationary probabilities and dwell times
+- `hmm_decode_comparison.csv`: Viterbi vs MAP decoded state comparison
+- `hmm_component_diagnostics.csv`: component-level return, volatility, dwell, and semantic scores
+- `hmm_synthetic_sample_stress.csv`: fitted-HMM sample-path stress rows
 - `factor_data_coverage.csv`: downloaded factor symbol coverage
 - `feature_summary.csv`: feature distribution and missingness summary
 - `nn_predictions.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics
+- `volatility_forecasts.csv`: realised, EWMA, GARCH, and ARCH volatility forecasts
+- `model_overfit_report.csv`: train/validation/test metric gap warnings
 
 Stress outputs:
 
