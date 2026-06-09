@@ -16,3 +16,4 @@ DEPENDENCY_GROUPS = {
 
 def dependency_health_frame() -> pd.DataFrame:
     rows = []
+    for package, purpose in DEP
