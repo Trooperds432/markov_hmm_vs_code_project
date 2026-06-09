@@ -14,5 +14,4 @@ DEPENDENCY_GROUPS = {
 }
 
 
-def dependency_health_frame() -> pd.DataFrame:
-    rows = []
+def dependency_health
