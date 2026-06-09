@@ -15,4 +15,9 @@ DEPENDENCY_GROUPS = {
 
 
 def dependency_health_frame() -> pd.DataFrame:
-   
+    rows = []
+    for package, purpose in DEPENDENCY_GROUPS.items():
+        rows.append(
+            {
+                "package": package,
+                "available
