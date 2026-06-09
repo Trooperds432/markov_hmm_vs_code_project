@@ -10,4 +10,9 @@ DEPENDENCY_GROUPS = {
     "statsforecast": "Optional statistical forecast benchmarks and GARCH/ARCH models",
     "torch": "Optional neural-network confirmation",
     "statsmodels": "Optional MarkovRegression benchmark",
-    "yfinance": "Market data
+    "yfinance": "Market data download",
+}
+
+
+def dependency_health_frame() -> pd.DataFrame:
+    rows = []
