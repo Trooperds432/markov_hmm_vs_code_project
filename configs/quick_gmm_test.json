@@ -1,0 +1,21 @@
+{
+  "ticker": "NVDA",
+  "benchmark": "QQQ",
+  "start": "2020-01-01",
+  "end": "2024-12-31",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 10,
+  "random_seeds": [7],
+  "enable_hmm_model_selection": true,
+  "hmm_model_types": ["gmm"],
+  "hmm_state_candidates": [3],
+  "hmm_covariance_candidates": ["diag"],
+  "hmm_n_mix_candidates": [2],
+  "hmm_min_covar_candidates": [0.001],
+  "hmm_transmat_prior_candidates": [5.0],
+  "hmm_model_selection_metric": "validation_bic",
+  "hmm_synthetic_sample_paths": 2,
+  "enable_experiment_tracking": false,
+  "enable_stress_tests": false
+}

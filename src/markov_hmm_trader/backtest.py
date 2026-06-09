@@ -7,9 +7,13 @@ import pandas as pd
 
 from .config import PipelineConfig
 from .diagnostics import (
+    make_component_diagnostic_rows,
+    make_decode_comparison_rows,
     make_emission_diagnostic_rows,
     make_seed_diagnostic_rows,
+    make_stationary_distribution_rows,
     make_state_stability_row,
+    make_synthetic_sample_stress,
     make_transition_matrix_row,
     make_window_diagnostic_row,
 )
@@ -29,6 +33,11 @@ class BacktestResult:
     hmm_emissions: pd.DataFrame
     hmm_transition_matrices: pd.DataFrame
     hmm_state_stability: pd.DataFrame
+    hmm_stationary_distribution: pd.DataFrame
+    hmm_decode_comparison: pd.DataFrame
+    hmm_component_diagnostics: pd.DataFrame
+    hmm_synthetic_sample_stress: pd.DataFrame
+    hmm_synthetic_sample_stress_summary: pd.DataFrame
 
 
 def drawdown_multiplier(current_dd: float, cfg: PipelineConfig) -> float:
@@ -115,6 +124,10 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
     emission_rows = []
     transition_rows = []
     stability_rows = []
+    stationary_rows = []
+    decode_rows = []
+    component_diagnostic_rows = []
+    fits_for_sample = []
     previous_fit = None
 
     for col in STATE_ORDER:
@@ -149,12 +162,13 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         model = fit.model
         X_test = fit.scaler.transform(test[features].values)
 
-        posteriors_raw = model.predict_proba(X_test)
+        test_log_prob, posteriors_raw = model.score_samples(X_test)
         next_probs_raw = posteriors_raw @ model.transmat_
 
         next_probs = semantic_probabilities(next_probs_raw, fit.state_map)
 
         decoded_raw = model.predict(X_test)
+        decoded_map_raw = posteriors_raw.argmax(axis=1)
         decoded = [fit.state_map[int(x)] for x in decoded_raw]
 
         idx = test.index
@@ -162,13 +176,31 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         df.loc[idx, "hidden_state"] = decoded
 
         if cfg.enable_diagnostics:
-            window_rows.append(make_window_diagnostic_row(window_id, train, test, fit, next_probs))
+            window_row = make_window_diagnostic_row(window_id, train, test, fit, next_probs)
+            window_row["test_log_likelihood"] = float(test_log_prob)
+            window_row["decode_disagreement_rate"] = float(np.mean(decoded_raw != decoded_map_raw))
+            window_rows.append(window_row)
             seed_rows.extend(make_seed_diagnostic_rows(window_id, train.index[-1], fit))
             for row in fit.model_selection_rows:
                 model_selection_rows.append({"window_id": window_id, **row})
             emission_rows.extend(make_emission_diagnostic_rows(window_id, train, fit, features))
             transition_rows.append(make_transition_matrix_row(window_id, train, test, fit))
+            stationary_rows.extend(make_stationary_distribution_rows(window_id, fit))
+            decode_rows.extend(
+                make_decode_comparison_rows(
+                    window_id,
+                    test.index,
+                    decoded_raw,
+                    decoded_map_raw,
+                    next_probs,
+                    fit,
+                )
+            )
+            component_diagnostic_rows.extend(
+                make_component_diagnostic_rows(window_id, train, fit)
+            )
             stability_rows.append(make_state_stability_row(window_id, previous_fit, fit))
+            fits_for_sample.append((window_id, fit))
             previous_fit = fit
 
     df["hmm_signal"] = df[STATE_BULL] - df[STATE_BEAR]
@@ -209,6 +241,12 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
     df["strategy_ret"] = df["strategy_equity"].pct_change().fillna(0.0)
     df["buy_hold_equity"] = (1.0 + df["ret_1"].fillna(0.0)).cumprod()
 
+    sample_stress, sample_stress_summary = (
+        make_synthetic_sample_stress(fits_for_sample, cfg)
+        if cfg.enable_diagnostics
+        else (pd.DataFrame(), pd.DataFrame())
+    )
+
     return BacktestResult(
         backtest=df,
         window_diagnostics=pd.DataFrame(window_rows),
@@ -217,4 +255,9 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         hmm_emissions=pd.DataFrame(emission_rows),
         hmm_transition_matrices=pd.DataFrame(transition_rows),
         hmm_state_stability=pd.DataFrame(stability_rows),
+        hmm_stationary_distribution=pd.DataFrame(stationary_rows),
+        hmm_decode_comparison=pd.DataFrame(decode_rows),
+        hmm_component_diagnostics=pd.DataFrame(component_diagnostic_rows),
+        hmm_synthetic_sample_stress=sample_stress,
+        hmm_synthetic_sample_stress_summary=sample_stress_summary,
     )

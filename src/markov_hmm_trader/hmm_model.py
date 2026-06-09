@@ -196,10 +196,17 @@ def component_covariance(model: GaussianHMM | GMMHMM, component: int) -> np.ndar
         return np.average(covars[component], axis=0, weights=weights)
     if covars.ndim == 3:
         item = covars[component]
+        if hasattr(model, "weights_") and item.ndim == 2:
+            weights = np.asarray(model.weights_[component], dtype=float)
+            return np.diag(np.average(item, axis=0, weights=weights))
         if item.ndim == 2:
             return item
         return np.diag(np.asarray(item, dtype=float))
     if covars.ndim == 2:
+        if hasattr(model, "weights_"):
+            weights = np.asarray(model.weights_[component], dtype=float)
+            n_features = int(np.asarray(model.means_).shape[-1])
+            return np.diag(np.repeat(np.average(covars[component], weights=weights), n_features))
         return np.diag(covars[component])
     return np.diag(np.atleast_1d(covars[component]))
 

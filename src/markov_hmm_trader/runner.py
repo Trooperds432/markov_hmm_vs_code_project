@@ -12,9 +12,12 @@ from .data import factor_data_coverage, load_market_data
 from .diagnostics import summarize_states
 from .ensemble import ensemble_diagnostics
 from .experiment import finalize_experiment_run, start_experiment_run
+from .forecast_benchmarks import run_forecast_benchmarks
 from .features import feature_summary, make_features
 from .metrics import add_backtest_metric_columns, make_report
-from .nn_model import nn_predictions_frame
+from .nn_model import nn_predictions_frame, nn_training_metrics_frame
+from .observable_markov import run_observable_markov
+from .overfit import hmm_overfit_report
 from .plots import save_plots
 from .stress import (
     make_asset_bootstrap_stress,
@@ -23,6 +26,7 @@ from .stress import (
     make_missing_data_stress,
     make_stress_tests,
 )
+from .volatility_forecast import run_volatility_forecasts
 
 
 def run_single(
@@ -72,8 +76,48 @@ def run_single(
             index=False,
         )
         result.hmm_state_stability.to_csv(output_dir / "hmm_state_stability.csv", index=False)
-        nn_predictions_frame(backtest).to_csv(output_dir / "nn_predictions.csv")
-        ensemble_diagnostics(backtest).to_csv(output_dir / "ensemble_diagnostics.csv")
+        result.hmm_stationary_distribution.to_csv(
+            output_dir / "hmm_stationary_distribution.csv",
+            index=False,
+        )
+        result.hmm_decode_comparison.to_csv(output_dir / "hmm_decode_comparison.csv", index=False)
+        result.hmm_component_diagnostics.to_csv(
+            output_dir / "hmm_component_diagnostics.csv",
+            index=False,
+        )
+        result.hmm_synthetic_sample_stress.to_csv(
+            output_dir / "hmm_synthetic_sample_stress.csv",
+            index=False,
+        )
+        result.hmm_synthetic_sample_stress_summary.to_csv(
+            output_dir / "hmm_synthetic_sample_stress_summary.csv",
+            index=False,
+        )
+        nn_predictions = nn_predictions_frame(backtest)
+        nn_predictions["ticker"] = run_cfg.ticker
+        nn_predictions.to_csv(output_dir / "nn_predictions.csv", index=False)
+        nn_training_metrics_frame(run_cfg).to_csv(output_dir / "nn_training_metrics.csv", index=False)
+        ensemble_frame = ensemble_diagnostics(backtest)
+        ensemble_frame.to_csv(output_dir / "ensemble_diagnostics.csv", index=False)
+        ensemble_frame.to_csv(output_dir / "ensemble_predictions.csv", index=False)
+        hmm_overfit_report(result.hmm_model_selection, result.window_diagnostics, run_cfg).to_csv(
+            output_dir / "model_overfit_report.csv",
+            index=False,
+        )
+
+        if run_cfg.enable_observable_markov:
+            for name, frame in run_observable_markov(backtest, run_cfg).items():
+                frame.to_csv(output_dir / f"{name}.csv", index=False)
+
+        if run_cfg.enable_forecast_benchmarks:
+            for name, frame in run_forecast_benchmarks(backtest, run_cfg).items():
+                frame.to_csv(output_dir / f"{name}.csv", index=False)
+
+        if run_cfg.enable_volatility_forecasts:
+            run_volatility_forecasts(backtest, run_cfg).to_csv(
+                output_dir / "volatility_forecasts.csv",
+                index=False,
+            )
 
     if stress_enabled:
         print("Saving stress tests...")
@@ -110,6 +154,7 @@ def run_single(
     if not result.hmm_transition_matrices.empty:
         latest_model = result.hmm_transition_matrices.iloc[-1]
         selected_model = {
+            "model_type": latest_model.get("model_type", "GaussianHMM"),
             "selected_n_states": latest_model.get("selected_n_states", run_cfg.n_states),
             "covariance_type": latest_model.get(
                 "selected_covariance_type", run_cfg.covariance_type
@@ -157,7 +202,7 @@ def run_portfolio_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool =
     from .portfolio import run_portfolio
 
     print("Running portfolio construction mode...")
-    outputs = run_portfolio(replace(cfg, portfolio_mode=True), output_dir)
+    outputs = run_portfolio(replace(cfg, portfolio_enabled=True, portfolio_mode="top_k"), output_dir)
     stats = outputs["portfolio_stats"]
     if isinstance(stats, pd.Series):
         print(stats.to_string())
@@ -188,44 +233,14 @@ def run_model_comparison_mode(
 
 
 def run_paper_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool = False) -> None:
-    from .execution.order_manager import orders_frame, target_weight_order
-    from .execution.paper_broker import PaperBroker
-    from .execution.risk_checks import run_risk_checks
+    from .paper_trading import run_paper_simulation
 
     print("Running simulation-only paper trading mode...")
     paper_cfg = replace(cfg, enable_paper_trading=True, enable_stress_tests=False)
     backtest, _ = run_single(paper_cfg, output_dir, make_plots=make_plots, write_stress=False)
-    latest = backtest.iloc[-1]
-    target_weight = float(latest.get("position", 0.0))
-    broker = PaperBroker(
-        initial_cash=paper_cfg.paper_initial_cash,
-        slippage_bps=paper_cfg.slippage_bps,
-    )
-    checks = run_risk_checks(paper_cfg, latest, target_weight, broker.get_cash())
     output_dir.mkdir(parents=True, exist_ok=True)
-    checks.to_csv(output_dir / "paper_risk_checks.csv", index=False)
-
-    orders = []
-    if checks["passed"].all():
-        orders.append(
-            target_weight_order(
-                broker,
-                paper_cfg.ticker,
-                target_weight,
-                float(latest["Close"]),
-                broker.get_cash(),
-            )
-        )
-    else:
+    outputs = run_paper_simulation(paper_cfg, backtest)
+    for name, frame in outputs.items():
+        frame.to_csv(output_dir / f"{name}.csv", index=False)
+    if not outputs["paper_risk_checks"]["passed"].all():
         print("Paper trading blocked by risk checks or unapproved model registry entry.")
-
-    orders_frame(orders).to_csv(output_dir / "paper_orders.csv", index=False)
-    pd.DataFrame([broker.get_positions()]).to_csv(output_dir / "paper_positions.csv", index=False)
-    pd.DataFrame(
-        [
-            {
-                "cash": broker.get_cash(),
-                "equity": broker.equity({paper_cfg.ticker: float(latest["Close"])}),
-            }
-        ]
-    ).to_csv(output_dir / "paper_equity.csv", index=False)

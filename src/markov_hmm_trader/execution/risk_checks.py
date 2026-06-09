@@ -23,8 +23,9 @@ def run_risk_checks(
     latest_row: pd.Series,
     target_weight: float,
     current_equity: float,
-    registry_path: Path = Path("experiments/registry/model_registry.csv"),
+    registry_path: Path | None = None,
 ) -> pd.DataFrame:
+    registry_path = Path(cfg.model_registry_path) if registry_path is None else registry_path
     confidence = float(max(latest_row.get("Bull", 0.0), latest_row.get("Bear", 0.0)))
     checks = [
         {

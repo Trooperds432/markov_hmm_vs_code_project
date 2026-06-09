@@ -47,7 +47,7 @@ def start_experiment_run(cfg: PipelineConfig, output_dir: Path) -> Path | None:
     if not cfg.enable_experiment_tracking:
         return None
 
-    run_dir = create_run_folder(cfg)
+    run_dir = create_run_folder(cfg, Path(cfg.experiment_root))
     with (run_dir / "config_snapshot.json").open("w", encoding="utf-8") as f:
         json.dump(asdict(cfg), f, indent=2, default=str)
 
@@ -85,6 +85,18 @@ def finalize_experiment_run(
     with (run_dir / "output_files.json").open("w", encoding="utf-8") as f:
         json.dump(files, f, indent=2)
 
+    manifest = {
+        "run_id": run_dir.name,
+        "config": asdict(cfg),
+        "selected_models": selected_model or {},
+        "file_inventory": files,
+        "git_commit": git_commit_hash(),
+    }
+    with (run_dir / "experiment_manifest.json").open("w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, default=str)
+    with (output_dir / "experiment_manifest.json").open("w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, default=str)
+
     append_model_registry(cfg, run_dir, stats, selected_model or {})
 
 
@@ -96,9 +108,9 @@ def append_model_registry(
     approved_for_paper_trading: bool = False,
     notes: str = "",
 ) -> None:
-    registry_dir = Path("experiments/registry")
+    registry_path = Path(cfg.model_registry_path)
+    registry_dir = registry_path.parent
     registry_dir.mkdir(parents=True, exist_ok=True)
-    registry_path = registry_dir / "model_registry.csv"
     row = {
         "run_id": run_dir.name,
         "timestamp": run_dir.name.split("_", 2)[0],

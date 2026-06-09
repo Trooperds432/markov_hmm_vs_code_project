@@ -37,7 +37,12 @@ def add_ensemble_signals(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     else:
         out["ensemble_signal"] = out.apply(lambda row: ensemble_signal_for_row(row, cfg), axis=1)
     out["hmm_signal"] = out.get("hmm_signal", out[STATE_BULL] - out[STATE_BEAR])
+    out["observable_markov_signal"] = out.get("observable_markov_signal", 0.0)
+    out["forecast_signal"] = out.get("forecast_signal", 0.0)
+    out["risk_multiplier"] = out.get("vol_risk_multiplier", 1.0)
     out["agreement"] = np.sign(out["hmm_signal"]) == np.sign(out.get("nn_signal", 0))
+    out["signal_direction"] = np.sign(out["ensemble_signal"])
+    out["signal_conviction"] = out["ensemble_signal"].abs()
     out["ensemble_regime"] = np.select(
         [
             out[STATE_BULL] >= out[[STATE_BEAR, STATE_SIDE]].max(axis=1),
@@ -50,11 +55,20 @@ def add_ensemble_signals(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
 
 
 def ensemble_diagnostics(df: pd.DataFrame) -> pd.DataFrame:
-    columns = [
-        "hmm_signal",
-        "nn_signal",
-        "ensemble_signal",
-        "agreement",
-        "position",
-    ]
-    return df[[column for column in columns if column in df]].copy()
+    out = pd.DataFrame(index=df.index)
+    out["date"] = df.index.date.astype(str)
+    out["hmm_signal"] = df.get("hmm_signal", 0.0)
+    out["observable_markov_signal"] = df.get("observable_markov_signal", 0.0)
+    out["forecast_signal"] = df.get("forecast_signal", 0.0)
+    out["nn_signal"] = df.get("nn_signal", 0)
+    out["ensemble_signal"] = df.get("ensemble_signal", df.get("hmm_signal", 0.0))
+    out["signal_direction"] = np.sign(out["ensemble_signal"])
+    out["signal_conviction"] = out["ensemble_signal"].abs()
+    out["risk_multiplier"] = df.get("vol_risk_multiplier", 1.0)
+    out["final_position"] = df.get("position", 0.0)
+    out["hmm_agree_nn"] = np.sign(out["hmm_signal"]) == np.sign(out["nn_signal"])
+    out["forecast_confirm_flag"] = np.sign(out["hmm_signal"]) == np.sign(out["forecast_signal"])
+    out["stationary_bear_gate"] = False
+    out["garch_gate"] = out["risk_multiplier"] < 1.0
+    out["final_trade_allowed"] = out["final_position"].abs() > 0.0
+    return out

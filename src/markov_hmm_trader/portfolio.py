@@ -22,12 +22,16 @@ def allocate_weights(
     if selected.empty:
         return pd.Series(dtype=float)
 
-    if cfg.portfolio_weighting_method == "equal":
+    method = cfg.portfolio_weighting_method
+    if method == "equal":
         raw = pd.Series(1.0, index=selected.index)
-    elif cfg.portfolio_weighting_method == "signal_weighted":
+    elif method in {"signal_weighted", "score"}:
         raw = selected.clip(lower=0.0)
-    elif cfg.portfolio_weighting_method == "risk_parity_simple":
+    elif method in {"risk_parity_simple", "vol_inverse", "inverse_vol"}:
         raw = 1.0 / volatility.reindex(selected.index).replace(0.0, np.nan)
+    elif method == "score_vol_inverse":
+        vol_inverse = 1.0 / volatility.reindex(selected.index).replace(0.0, np.nan)
+        raw = selected.clip(lower=0.0) * vol_inverse
     else:
         raw = 1.0 / volatility.reindex(selected.index).replace(0.0, np.nan)
 
@@ -37,6 +41,9 @@ def allocate_weights(
 
     weights = raw / raw.sum()
     weights = weights.clip(upper=float(cfg.portfolio_max_weight_per_asset))
+    max_invested = max(0.0, 1.0 - float(cfg.portfolio_cash_buffer))
+    if weights.sum() > max_invested:
+        weights = weights / weights.sum() * max_invested
     total = weights.sum()
     if total > 1.0:
         weights = weights / total
