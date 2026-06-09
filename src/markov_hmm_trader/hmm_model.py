@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
-from hmmlearn.hmm import GaussianHMM
+from hmmlearn.hmm import GMMHMM, GaussianHMM
 from sklearn.preprocessing import StandardScaler
 
 from .config import PipelineConfig
@@ -22,7 +22,7 @@ class SeedFitDiagnostic:
 
 @dataclass
 class HMMFitResult:
-    model: GaussianHMM
+    model: GaussianHMM | GMMHMM
     scaler: StandardScaler
     state_map: dict[int, str]
     best_seed: int
@@ -34,6 +34,63 @@ class HMMFitResult:
     model_selection_rows: list[dict[str, object]] = field(default_factory=list)
     selected_n_states: int = 3
     selected_covariance_type: str = "full"
+    selected_model_type: str = "gaussian"
+    selected_n_mix: int = 1
+    selected_min_covar: float = 1e-3
+    selected_transmat_prior: float = 1.0
+    feature_names: list[str] = field(default_factory=list)
+
+
+def build_hmm(
+    cfg: PipelineConfig,
+    random_state: int,
+    candidate: dict[str, object] | None = None,
+) -> GaussianHMM | GMMHMM:
+    candidate = candidate or {}
+    model_type = str(candidate.get("model_type", cfg.hmm_model_type)).lower()
+    n_components = int(candidate.get("n_states", cfg.n_states))
+    covariance_type = str(candidate.get("covariance_type", cfg.covariance_type))
+    min_covar = float(candidate.get("min_covar", cfg.hmm_min_covar))
+    transmat_prior = float(candidate.get("transmat_prior", cfg.hmm_transmat_prior))
+    common = {
+        "n_components": n_components,
+        "min_covar": min_covar,
+        "startprob_prior": cfg.hmm_startprob_prior,
+        "transmat_prior": transmat_prior,
+        "algorithm": cfg.hmm_decode_algorithm,
+        "random_state": int(random_state),
+        "n_iter": cfg.n_iter,
+        "tol": cfg.tolerance,
+        "params": str(candidate.get("params", cfg.hmm_params)),
+        "init_params": str(candidate.get("init_params", cfg.hmm_init_params)),
+        "implementation": cfg.hmm_implementation,
+    }
+
+    if model_type == "gmm":
+        return GMMHMM(
+            n_mix=int(candidate.get("n_mix", cfg.hmm_n_mix)),
+            covariance_type=covariance_type,
+            weights_prior=cfg.hmm_weights_prior,
+            means_prior=cfg.hmm_means_prior,
+            means_weight=cfg.hmm_means_weight,
+            covars_prior=cfg.hmm_covars_prior,
+            covars_weight=cfg.hmm_covars_weight,
+            params=str(candidate.get("params", cfg.hmm_params_gmm)),
+            init_params=str(candidate.get("init_params", cfg.hmm_init_params_gmm)),
+            **{k: v for k, v in common.items() if k not in {"params", "init_params"}},
+        )
+
+    if model_type != "gaussian":
+        raise ValueError(f"Unsupported hmm_model_type={model_type}")
+
+    return GaussianHMM(
+        covariance_type=covariance_type,
+        means_prior=cfg.hmm_means_prior,
+        means_weight=cfg.hmm_means_weight,
+        covars_prior=cfg.hmm_covars_prior,
+        covars_weight=cfg.hmm_covars_weight,
+        **common,
+    )
 
 
 def fit_hmm_best_of_seeds(
@@ -56,15 +113,7 @@ def fit_hmm_best_of_seeds(
 
     for seed in cfg.random_seeds:
         try:
-            model = GaussianHMM(
-                n_components=cfg.n_states,
-                covariance_type=cfg.covariance_type,
-                n_iter=cfg.n_iter,
-                tol=cfg.tolerance,
-                random_state=seed,
-                algorithm="viterbi",
-                implementation="scaling",
-            )
+            model = build_hmm(cfg, int(seed))
             model.fit(X)
             score = model.score(X)
             converged = bool(getattr(model.monitor_, "converged", False))
@@ -124,7 +173,35 @@ def fit_hmm_best_of_seeds(
         component_diagnostics=component_diagnostics,
         selected_n_states=cfg.n_states,
         selected_covariance_type=cfg.covariance_type,
+        selected_model_type=cfg.hmm_model_type,
+        selected_n_mix=cfg.hmm_n_mix if cfg.hmm_model_type == "gmm" else 1,
+        selected_min_covar=cfg.hmm_min_covar,
+        selected_transmat_prior=cfg.hmm_transmat_prior,
+        feature_names=list(features),
     )
+
+
+def component_mean(model: GaussianHMM | GMMHMM, component: int) -> np.ndarray:
+    means = np.asarray(model.means_, dtype=float)
+    if means.ndim == 3:
+        weights = np.asarray(model.weights_[component], dtype=float)
+        return np.average(means[component], axis=0, weights=weights)
+    return means[component]
+
+
+def component_covariance(model: GaussianHMM | GMMHMM, component: int) -> np.ndarray:
+    covars = np.asarray(model.covars_, dtype=float)
+    if covars.ndim == 4:
+        weights = np.asarray(model.weights_[component], dtype=float)
+        return np.average(covars[component], axis=0, weights=weights)
+    if covars.ndim == 3:
+        item = covars[component]
+        if item.ndim == 2:
+            return item
+        return np.diag(np.asarray(item, dtype=float))
+    if covars.ndim == 2:
+        return np.diag(covars[component])
+    return np.diag(np.atleast_1d(covars[component]))
 
 
 def _component_drawdown(returns: pd.Series) -> float:
@@ -165,6 +242,9 @@ def map_components_to_semantic_states(
         safe_vol = volatility if np.isfinite(volatility) else 0.0
         safe_drawdown = drawdown if np.isfinite(drawdown) else 0.0
         semantic_score = safe_forward - 0.25 * safe_vol + 0.05 * trend_score + 0.10 * safe_drawdown
+        bull_score = safe_forward + 0.5 * trend_score - 0.5 * safe_vol + 0.25 * safe_drawdown
+        bear_score = -safe_forward + 0.5 * safe_vol - 0.25 * trend_score - 0.25 * safe_drawdown
+        sideways_score = -abs(safe_forward) - 0.25 * abs(trend_score) + 0.1 * safe_vol
 
         diagnostics[component] = {
             "forward_return": forward_return,
@@ -174,6 +254,9 @@ def map_components_to_semantic_states(
             "trend_score": trend_score,
             "skew": skew,
             "semantic_score": float(semantic_score),
+            "bull_score": float(bull_score),
+            "bear_score": float(bear_score),
+            "sideways_score": float(sideways_score),
         }
 
     components = list(diagnostics)

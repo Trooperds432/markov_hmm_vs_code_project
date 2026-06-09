@@ -8,6 +8,7 @@ from src.markov_hmm_trader.config import (
     apply_quick_mode,
     load_config,
 )
+from src.markov_hmm_trader.dependencies import dependency_status_text
 from src.markov_hmm_trader.runner import (
     run_model_comparison_mode,
     run_nested_mode,
@@ -57,11 +58,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--paper", action="store_true", help="Run simulation-only paper trading mode."
     )
+    parser.add_argument(
+        "--check-deps",
+        action="store_true",
+        help="Print optional dependency availability and exit.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if args.check_deps:
+        print(dependency_status_text())
+        return
+
     cfg = load_config(args.config)
     cfg = apply_profile(cfg, args.profile)
     cfg = apply_overrides(

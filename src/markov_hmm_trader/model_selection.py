@@ -4,13 +4,14 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from hmmlearn.hmm import GaussianHMM
+from hmmlearn.hmm import GMMHMM, GaussianHMM
 from sklearn.preprocessing import StandardScaler
 
 from .config import PipelineConfig
 from .hmm_model import (
     HMMFitResult,
     SeedFitDiagnostic,
+    build_hmm,
     map_components_to_semantic_states,
     semantic_probabilities,
 )
@@ -19,7 +20,7 @@ from .states import STATE_BEAR, STATE_BULL
 
 @dataclass
 class HMMCandidateFit:
-    model: GaussianHMM | None
+    model: GaussianHMM | GMMHMM | None
     scaler: StandardScaler | None
     row: dict[str, object]
     state_map: dict[int, str] | None
@@ -36,15 +37,26 @@ def validation_split(
     return train_df.iloc[:split_idx].copy(), train_df.iloc[split_idx:].copy()
 
 
-def hmm_num_parameters(n_states: int, n_features: int, covariance_type: str) -> int:
+def hmm_num_parameters(
+    n_states: int,
+    n_features: int,
+    covariance_type: str,
+    model_type: str = "gaussian",
+    n_mix: int = 1,
+) -> int:
     start_probs = n_states - 1
     transition_probs = n_states * (n_states - 1)
-    means = n_states * n_features
+    mix_weights = 0 if model_type == "gaussian" else n_states * max(n_mix - 1, 0)
+    means = n_states * n_mix * n_features
     if covariance_type == "full":
-        covariances = n_states * n_features * (n_features + 1) // 2
+        covariances = n_states * n_mix * n_features * (n_features + 1) // 2
+    elif covariance_type == "tied":
+        covariances = n_features * (n_features + 1) // 2
+    elif covariance_type == "spherical":
+        covariances = n_states * n_mix
     else:
-        covariances = n_states * n_features
-    return int(start_probs + transition_probs + means + covariances)
+        covariances = n_states * n_mix * n_features
+    return int(start_probs + transition_probs + mix_weights + means + covariances)
 
 
 def information_criteria(
@@ -89,24 +101,31 @@ def fit_hmm_candidate(
     inner_train: pd.DataFrame,
     validation: pd.DataFrame,
     features: list[str],
-    n_states: int,
-    covariance_type: str,
-    seed: int,
+    candidate: dict[str, object],
     cfg: PipelineConfig,
 ) -> HMMCandidateFit:
     row: dict[str, object] = {
-        "n_states": int(n_states),
-        "covariance_type": covariance_type,
-        "seed": int(seed),
+        "candidate_id": int(candidate["candidate_id"]),
+        "model_type": str(candidate["model_type"]),
+        "n_states": int(candidate["n_states"]),
+        "n_mix": int(candidate["n_mix"]),
+        "covariance_type": str(candidate["covariance_type"]),
+        "min_covar": float(candidate["min_covar"]),
+        "transmat_prior": float(candidate["transmat_prior"]),
+        "params": str(candidate["params"]),
+        "init_params": str(candidate["init_params"]),
+        "seed": int(candidate["seed"]),
         "converged": False,
         "iterations": 0,
         "train_log_likelihood": np.nan,
         "validation_log_likelihood": np.nan,
-        "aic": np.nan,
-        "bic": np.nan,
+        "train_aic": np.nan,
+        "train_bic": np.nan,
         "validation_aic": np.nan,
         "validation_bic": np.nan,
         "validation_sharpe_proxy": np.nan,
+        "selection_metric": cfg.hmm_model_selection_metric,
+        "selection_score": np.nan,
         "selected": False,
         "error": "",
     }
@@ -115,20 +134,21 @@ def fit_hmm_candidate(
         scaler = StandardScaler()
         X_train = scaler.fit_transform(inner_train[features].values)
         X_val = scaler.transform(validation[features].values)
-        model = GaussianHMM(
-            n_components=int(n_states),
-            covariance_type=covariance_type,
-            n_iter=cfg.n_iter,
-            tol=cfg.tolerance,
-            random_state=int(seed),
-            algorithm="viterbi",
-            implementation="scaling",
-        )
+        model = build_hmm(cfg, int(candidate["seed"]), candidate)
         model.fit(X_train)
         train_ll = float(model.score(X_train))
         validation_ll = float(model.score(X_val))
-        n_params = hmm_num_parameters(int(n_states), len(features), covariance_type)
-        aic, bic = information_criteria(validation_ll, n_params, len(validation))
+        n_params = hmm_num_parameters(
+            int(candidate["n_states"]),
+            len(features),
+            str(candidate["covariance_type"]),
+            str(candidate["model_type"]),
+            int(candidate["n_mix"]),
+        )
+        train_aic, train_bic = information_criteria(train_ll, n_params, len(inner_train))
+        validation_aic, validation_bic = information_criteria(
+            validation_ll, n_params, len(validation)
+        )
         hidden_train = model.predict(X_train)
         state_map, component_diagnostics = map_components_to_semantic_states(
             model,
@@ -142,10 +162,10 @@ def fit_hmm_candidate(
                 "iterations": int(getattr(model.monitor_, "iter", 0)),
                 "train_log_likelihood": train_ll,
                 "validation_log_likelihood": validation_ll,
-                "aic": aic,
-                "bic": bic,
-                "validation_aic": aic,
-                "validation_bic": bic,
+                "train_aic": train_aic,
+                "train_bic": train_bic,
+                "validation_aic": validation_aic,
+                "validation_bic": validation_bic,
                 "validation_sharpe_proxy": _validation_sharpe_proxy(
                     model,
                     scaler,
@@ -155,6 +175,9 @@ def fit_hmm_candidate(
                 ),
             }
         )
+        metric = _normalise_metric_name(cfg.hmm_model_selection_metric)
+        row["selection_metric"] = metric
+        row["selection_score"] = _score_candidate_row(row, metric)
         return HMMCandidateFit(model, scaler, row, state_map, component_diagnostics)
     except Exception as err:
         row["error"] = type(err).__name__
@@ -167,7 +190,7 @@ def _refit_selected(
     selected_row: dict[str, object],
     cfg: PipelineConfig,
     fallback: HMMCandidateFit,
-) -> tuple[GaussianHMM, StandardScaler, float]:
+) -> tuple[GaussianHMM | GMMHMM, StandardScaler, float]:
     if not cfg.refit_selected_hmm_on_full_train:
         if fallback.model is None or fallback.scaler is None:
             raise RuntimeError("Selected HMM candidate is unavailable.")
@@ -175,17 +198,60 @@ def _refit_selected(
 
     scaler = StandardScaler()
     X = scaler.fit_transform(train_df[features].values)
-    model = GaussianHMM(
-        n_components=int(selected_row["n_states"]),
-        covariance_type=str(selected_row["covariance_type"]),
-        n_iter=cfg.n_iter,
-        tol=cfg.tolerance,
-        random_state=int(selected_row["seed"]),
-        algorithm="viterbi",
-        implementation="scaling",
-    )
+    model = build_hmm(cfg, int(selected_row["seed"]), selected_row)
     model.fit(X)
     return model, scaler, float(model.score(X))
+
+
+def _normalise_metric_name(metric: str) -> str:
+    if metric in {"validation_aic", "aic"}:
+        return "validation_aic"
+    if metric in {"validation_bic", "bic"}:
+        return "validation_bic"
+    if metric in {
+        "train_log_likelihood",
+        "validation_log_likelihood",
+        "validation_sharpe_proxy",
+    }:
+        return metric
+    return "validation_bic"
+
+
+def _candidate_grid(cfg: PipelineConfig) -> list[dict[str, object]]:
+    rows = []
+    candidate_id = 1
+    for model_type in cfg.hmm_model_types:
+        for n_states in cfg.hmm_state_candidates:
+            n_mix_values = cfg.hmm_n_mix_candidates if model_type == "gmm" else (1,)
+            for n_mix in n_mix_values:
+                for covariance_type in cfg.hmm_covariance_candidates:
+                    for min_covar in cfg.hmm_min_covar_candidates:
+                        for transmat_prior in cfg.hmm_transmat_prior_candidates:
+                            for seed in cfg.random_seeds:
+                                rows.append(
+                                    {
+                                        "candidate_id": candidate_id,
+                                        "model_type": model_type,
+                                        "n_states": int(n_states),
+                                        "n_mix": int(n_mix),
+                                        "covariance_type": str(covariance_type),
+                                        "min_covar": float(min_covar),
+                                        "transmat_prior": float(transmat_prior),
+                                        "params": (
+                                            cfg.hmm_params_gmm
+                                            if model_type == "gmm"
+                                            else cfg.hmm_params
+                                        ),
+                                        "init_params": (
+                                            cfg.hmm_init_params_gmm
+                                            if model_type == "gmm"
+                                            else cfg.hmm_init_params
+                                        ),
+                                        "seed": int(seed),
+                                    }
+                                )
+                                candidate_id += 1
+    return rows
 
 
 def select_hmm_model(
@@ -196,39 +262,18 @@ def select_hmm_model(
     inner_train, validation = validation_split(train_df, cfg.hmm_validation_fraction)
     candidates: list[HMMCandidateFit] = []
 
-    for n_states in cfg.hmm_state_candidates:
-        for covariance_type in cfg.hmm_covariance_candidates:
-            for seed in cfg.random_seeds:
-                candidates.append(
-                    fit_hmm_candidate(
-                        inner_train,
-                        validation,
-                        features,
-                        int(n_states),
-                        str(covariance_type),
-                        int(seed),
-                        cfg,
-                    )
-                )
+    for candidate in _candidate_grid(cfg):
+        candidates.append(fit_hmm_candidate(inner_train, validation, features, candidate, cfg))
 
     valid = [candidate for candidate in candidates if candidate.model is not None]
     if not valid:
         raise RuntimeError("All HMM model-selection candidates failed.")
 
-    metric = cfg.hmm_model_selection_metric
-    if metric == "validation_aic":
-        metric = "validation_aic"
-    elif metric == "validation_bic":
-        metric = "validation_bic"
-    elif metric not in {
-        "train_log_likelihood",
-        "validation_log_likelihood",
-        "validation_sharpe_proxy",
-    }:
-        metric = "validation_bic"
+    metric = _normalise_metric_name(cfg.hmm_model_selection_metric)
 
     selected = max(valid, key=lambda candidate: _score_candidate_row(candidate.row, metric))
     selected.row["selected"] = True
+    selected.row["selection_score"] = _score_candidate_row(selected.row, metric)
     rows = [candidate.row for candidate in candidates]
 
     model, scaler, train_ll = _refit_selected(train_df, features, selected.row, cfg, selected)
@@ -258,6 +303,7 @@ def select_hmm_model(
         for row in rows
         if int(row["n_states"]) == int(selected.row["n_states"])
         and str(row["covariance_type"]) == str(selected.row["covariance_type"])
+        and str(row["model_type"]) == str(selected.row["model_type"])
     ]
 
     return HMMFitResult(
@@ -273,4 +319,9 @@ def select_hmm_model(
         model_selection_rows=rows,
         selected_n_states=int(selected.row["n_states"]),
         selected_covariance_type=str(selected.row["covariance_type"]),
+        selected_model_type=str(selected.row["model_type"]),
+        selected_n_mix=int(selected.row["n_mix"]),
+        selected_min_covar=float(selected.row["min_covar"]),
+        selected_transmat_prior=float(selected.row["transmat_prior"]),
+        feature_names=list(features),
     )
