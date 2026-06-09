@@ -53,6 +53,12 @@ class PipelineConfig:
     vol_lookback: int = 30
     min_vol_mult: float = 0.35
     max_vol_mult: float = 1.75
+    enable_volatility_forecasts: bool = True
+    vol_model: str = "realised_vol"
+    vol_model_candidates: tuple[str, ...] = ("realised_vol", "ewma_vol", "garch", "arch")
+    ewma_lambda: float = 0.94
+    vol_forecast_horizon_bars: int = 20
+    vol_rank_window: int = 252
 
     # Drawdown throttle
     use_drawdown_throttle: bool = True
@@ -91,6 +97,22 @@ class PipelineConfig:
     stress_missing_data_probabilities: tuple[float, ...] = (0.01, 0.03, 0.05)
     custom_crisis_windows: dict[str, dict[str, str]] = field(default_factory=dict)
     benchmark_maxiter: int = 200
+
+    # Observable Markov baseline
+    enable_observable_markov: bool = False
+    observable_markov_window: int = 20
+    observable_markov_threshold: float = 0.05
+    observable_markov_forecast_horizons: tuple[int, ...] = (1, 5, 20, 60)
+
+    # Forecast benchmarks
+    enable_forecast_benchmarks: bool = False
+    forecast_model_candidates: tuple[str, ...] = ("AutoARIMA", "AutoETS", "AutoTheta", "Naive")
+    forecast_horizon_bars: int = 20
+
+    # Overfit diagnostics
+    enable_overfit_report: bool = True
+    overfit_train_validation_gap_warn: float = 0.25
+    overfit_validation_test_gap_warn: float = 0.25
 
     # Universe and factor data
     universe: tuple[str, ...] = (
@@ -181,7 +203,11 @@ def load_config(path: str | Path) -> PipelineConfig:
         raw = json.load(f)
 
     valid_names = {field.name for field in fields(PipelineConfig)}
-    clean = {k: v for k, v in raw.items() if k in valid_names}
+    aliases = {
+        "universe_tickers": "universe",
+    }
+    translated = {aliases.get(k, k): v for k, v in raw.items()}
+    clean = {k: v for k, v in translated.items() if k in valid_names}
 
     tuple_fields = {
         "random_seeds",
@@ -192,6 +218,9 @@ def load_config(path: str | Path) -> PipelineConfig:
         "stress_commission_bps_values",
         "stress_slippage_bps_values",
         "stress_missing_data_probabilities",
+        "observable_markov_forecast_horizons",
+        "forecast_model_candidates",
+        "vol_model_candidates",
         "universe",
         "nn_hidden_sizes",
         "portfolio_symbols",
