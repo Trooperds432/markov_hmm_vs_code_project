@@ -44,7 +44,7 @@ def allocate_weights(
 
 
 def _rebalance_dates(index: pd.DatetimeIndex, frequency: str) -> pd.DatetimeIndex:
-    rule = "W-FRI" if frequency == "weekly" else "M"
+    rule = "W-FRI" if frequency == "weekly" else "ME"
     return pd.Series(index, index=index).resample(rule).last().dropna().values
 
 
