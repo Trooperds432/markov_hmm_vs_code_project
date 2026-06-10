@@ -15,7 +15,8 @@ from .experiment import finalize_experiment_run, start_experiment_run
 from .features import feature_summary, make_features
 from .forecast_benchmarks import run_forecast_benchmarks
 from .metrics import add_backtest_metric_columns, make_report
-from .nn_model import nn_predictions_frame, nn_training_metrics_frame
+from .nn_model import nn_forecasts_frame, nn_oos_split_info_frame, nn_predictions_frame
+from .nn_model import nn_training_metrics_frame
 from .observable_markov import run_observable_markov
 from .overfit import hmm_overfit_report
 from .plots import save_plots
@@ -98,6 +99,12 @@ def run_single(
         nn_predictions = nn_predictions_frame(backtest)
         nn_predictions["ticker"] = run_cfg.ticker
         nn_predictions.to_csv(output_dir / "nn_predictions.csv", index=False)
+        nn_forecasts = nn_forecasts_frame(backtest, run_cfg)
+        nn_forecasts["ticker"] = run_cfg.ticker
+        nn_forecasts.to_csv(output_dir / "nn_forecasts.csv", index=False)
+        nn_oos_split_info_frame(run_cfg).to_csv(
+            output_dir / "nn_oos_split_info.csv", index=False
+        )
         nn_training_metrics_frame(run_cfg).to_csv(
             output_dir / "nn_training_metrics.csv", index=False
         )

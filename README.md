@@ -25,9 +25,12 @@ pip install -r requirements-forecast.txt
 ```
 
 The advanced adapters use package APIs and implementation patterns from the connected
-`hmmlearn`, `statsforecast`, and LSTM stock-predictor repos. The project does not
+`hmmlearn`, `statsforecast`, and local LSTM stock-predictor repos. The project does not
 vendor those repositories or depend directly on GitHub forks; optional integrations
-activate only when their normal Python packages are installed.
+activate only when their normal Python packages are installed. The LSTM integration is
+a Torch implementation of the local repo's useful research patterns: strict OOS split
+metadata, sequence windows, MC-dropout uncertainty, adjusted probabilities, and
+recency-weighted training.
 
 Check optional dependency health:
 
@@ -96,7 +99,7 @@ Diagnostics:
 - `hmm_synthetic_sample_stress.csv`: fitted-HMM sample-path stress rows
 - `factor_data_coverage.csv`: downloaded factor symbol coverage
 - `feature_summary.csv`: feature distribution and missingness summary
-- `nn_predictions.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics
+- `nn_predictions.csv`, `nn_forecasts.csv`, `nn_oos_split_info.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics
 - `volatility_forecasts.csv`: realised, EWMA, GARCH, and ARCH volatility forecasts
 - `model_overfit_report.csv`: train/validation/test metric gap warnings
 
@@ -119,6 +122,7 @@ Other modes:
 ## Common Errors
 
 - Missing optional NN dependency: install `requirements-ml.txt` or keep `enable_nn_confirmation=false`.
+  NN diagnostics still write structured skip metadata when Torch is unavailable.
 - Empty data from Yahoo Finance: check ticker, benchmark, date range, and internet access.
 - Too little data after feature warmup: reduce `train_window`, use `configs/quick_test.json`, or extend the date range.
 - Paper mode blocked: the model registry is not approved by default, by design.

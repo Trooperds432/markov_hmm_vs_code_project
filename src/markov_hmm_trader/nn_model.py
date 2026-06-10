@@ -374,14 +374,26 @@ def _train_predict_window(
     )
 
 
+def _with_split_dates(split_info: dict[str, object], df: pd.DataFrame) -> dict[str, object]:
+    out = dict(split_info)
+    out["train_start"] = _position_date(df, out.get("train_start_position"))
+    out["train_end"] = _position_date(df, out.get("train_end_position"))
+    out["validation_start"] = _position_date(df, out.get("validation_start_position"))
+    out["validation_end"] = _position_date(df, out.get("validation_end_position"))
+    out["oos_start"] = _position_date(df, out.get("oos_start_position"))
+    out["oos_end"] = _position_date(df, out.get("oos_end_position"))
+    return out
+
+
 def add_nn_confirmation(
     df: pd.DataFrame,
     feature_cols: list[str],
     cfg: PipelineConfig,
 ) -> pd.DataFrame:
     """Add optional PyTorch NN confirmation with strict walk-forward OOS boundaries."""
-    global _LAST_TRAINING_METRICS
+    global _LAST_SPLIT_METADATA, _LAST_TRAINING_METRICS
     _LAST_TRAINING_METRICS = []
+    _LAST_SPLIT_METADATA = []
     out = make_forward_labels(df, cfg.nn_horizon_bars)
     if not cfg.enable_nn_confirmation:
         return _set_empty_nn_columns(out, cfg)
@@ -398,6 +410,37 @@ def add_nn_confirmation(
                 "best_epoch": 0,
                 "early_stop_triggered": False,
                 "model_type": cfg.nn_model_type,
+                "learning_rate": np.nan,
+                "train_rows": 0,
+                "validation_rows": 0,
+                "oos_rows": 0,
+                "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                "mean_sample_weight": np.nan,
+                "error": "torch_missing",
+            }
+        ]
+        _LAST_SPLIT_METADATA = [
+            {
+                "run_id": "",
+                "window_id": 0,
+                "fold_id": 0,
+                "model_type": cfg.nn_model_type,
+                "horizon_bars": int(cfg.nn_horizon_bars),
+                "lookback_bars": int(cfg.nn_lookback_bars),
+                "raw_train_rows": 0,
+                "raw_oos_rows": 0,
+                "train_rows": 0,
+                "validation_rows": 0,
+                "oos_rows": 0,
+                "train_start": "",
+                "train_end": "",
+                "validation_start": "",
+                "validation_end": "",
+                "oos_start": "",
+                "oos_end": "",
+                "strict_oos_enforced": bool(cfg.nn_require_oos_metadata),
+                "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                "mean_sample_weight": np.nan,
                 "error": "torch_missing",
             }
         ]
@@ -429,7 +472,7 @@ def add_nn_confirmation(
         std = train_values.std(axis=0).replace(0.0, 1.0).fillna(1.0)
         matrix = ((values - mean) / std).to_numpy(dtype=np.float32)
         try:
-            frame, metrics = _train_predict_window(
+            frame, metrics, split_info = _train_predict_window(
                 matrix,
                 labels,
                 train_positions,
@@ -438,9 +481,46 @@ def add_nn_confirmation(
                 fold_id,
             )
             _LAST_TRAINING_METRICS.extend(metrics)
+            _LAST_SPLIT_METADATA.append(_with_split_dates(split_info, out))
             if not frame.empty:
                 predictions.append(frame)
         except Exception as err:
+            _LAST_SPLIT_METADATA.append(
+                _with_split_dates(
+                    {
+                        "run_id": "",
+                        "window_id": fold_id,
+                        "fold_id": fold_id,
+                        "model_type": cfg.nn_model_type,
+                        "horizon_bars": int(cfg.nn_horizon_bars),
+                        "lookback_bars": int(cfg.nn_lookback_bars),
+                        "raw_train_rows": int(len(train_positions)),
+                        "raw_oos_rows": int(len(test_positions)),
+                        "train_rows": 0,
+                        "validation_rows": 0,
+                        "oos_rows": 0,
+                        "train_start_position": (
+                            int(train_positions[0]) if len(train_positions) else np.nan
+                        ),
+                        "train_end_position": (
+                            int(train_positions[-1]) if len(train_positions) else np.nan
+                        ),
+                        "validation_start_position": np.nan,
+                        "validation_end_position": np.nan,
+                        "oos_start_position": (
+                            int(test_positions[0]) if len(test_positions) else np.nan
+                        ),
+                        "oos_end_position": (
+                            int(test_positions[-1]) if len(test_positions) else np.nan
+                        ),
+                        "strict_oos_enforced": bool(cfg.nn_require_oos_metadata),
+                        "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                        "mean_sample_weight": np.nan,
+                        "error": type(err).__name__,
+                    },
+                    out,
+                )
+            )
             _LAST_TRAINING_METRICS.append(
                 {
                     "run_id": "",
@@ -451,6 +531,12 @@ def add_nn_confirmation(
                     "best_epoch": 0,
                     "early_stop_triggered": False,
                     "model_type": cfg.nn_model_type,
+                    "learning_rate": np.nan,
+                    "train_rows": 0,
+                    "validation_rows": 0,
+                    "oos_rows": 0,
+                    "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                    "mean_sample_weight": np.nan,
                     "error": type(err).__name__,
                 }
             )
@@ -484,6 +570,38 @@ def add_nn_confirmation(
                 "best_epoch": 0,
                 "early_stop_triggered": False,
                 "model_type": cfg.nn_model_type,
+                "learning_rate": np.nan,
+                "train_rows": 0,
+                "validation_rows": 0,
+                "oos_rows": 0,
+                "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                "mean_sample_weight": np.nan,
+                "error": "insufficient_oos_training_data",
+            }
+        ]
+    if not _LAST_SPLIT_METADATA:
+        _LAST_SPLIT_METADATA = [
+            {
+                "run_id": "",
+                "window_id": 0,
+                "fold_id": 0,
+                "model_type": cfg.nn_model_type,
+                "horizon_bars": int(cfg.nn_horizon_bars),
+                "lookback_bars": int(cfg.nn_lookback_bars),
+                "raw_train_rows": 0,
+                "raw_oos_rows": 0,
+                "train_rows": 0,
+                "validation_rows": 0,
+                "oos_rows": 0,
+                "train_start": "",
+                "train_end": "",
+                "validation_start": "",
+                "validation_end": "",
+                "oos_start": "",
+                "oos_end": "",
+                "strict_oos_enforced": bool(cfg.nn_require_oos_metadata),
+                "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                "mean_sample_weight": np.nan,
                 "error": "insufficient_oos_training_data",
             }
         ]
@@ -522,6 +640,92 @@ def nn_predictions_frame(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def nn_forecasts_frame(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
+    """Write an LSTM-repo-compatible single-horizon forecast view."""
+    suffix = _horizon_suffix(int(cfg.nn_horizon_bars))
+    out = pd.DataFrame(index=df.index)
+    out["Date"] = df.index.date.astype(str)
+    out["Close"] = df["Close"] if "Close" in df else np.nan
+    out[f"Pred_Prob_{suffix}"] = df.get("nn_probability_positive", np.nan)
+    out[f"Pred_Prob_Std_{suffix}"] = df.get("nn_probability_std", np.nan)
+    out[f"Adj_Prob_{suffix}"] = df.get("nn_adjusted_probability", np.nan)
+    out[f"Pred_Class_{suffix}"] = df.get("nn_signal", 0)
+    out[f"Label_{suffix}"] = df.get("target_positive", np.nan)
+    out["forecast_horizon_bars"] = int(cfg.nn_horizon_bars)
+    out["window_id"] = df.get("nn_window_id", df.get("hmm_window_id", 0))
+    out["is_oos"] = df.get("nn_is_oos", True)
+    out["split"] = np.where(out["is_oos"], "oos", "not_oos")
+    out["model_type"] = df.get("nn_model_type", cfg.nn_model_type)
+    out["error"] = df.get("nn_error", "")
+    return out.reset_index(drop=True)
+
+
+def nn_oos_split_info_frame(cfg: PipelineConfig) -> pd.DataFrame:
+    columns = [
+        "run_id",
+        "window_id",
+        "fold_id",
+        "model_type",
+        "horizon_bars",
+        "lookback_bars",
+        "raw_train_rows",
+        "raw_oos_rows",
+        "train_rows",
+        "validation_rows",
+        "oos_rows",
+        "train_start",
+        "train_end",
+        "validation_start",
+        "validation_end",
+        "oos_start",
+        "oos_end",
+        "train_start_position",
+        "train_end_position",
+        "validation_start_position",
+        "validation_end_position",
+        "oos_start_position",
+        "oos_end_position",
+        "strict_oos_enforced",
+        "use_time_decay_weights",
+        "mean_sample_weight",
+        "error",
+    ]
+    if _LAST_SPLIT_METADATA:
+        frame = pd.DataFrame(_LAST_SPLIT_METADATA)
+    else:
+        frame = pd.DataFrame(
+            [
+                {
+                    "run_id": "",
+                    "window_id": 0,
+                    "fold_id": 0,
+                    "model_type": cfg.nn_model_type,
+                    "horizon_bars": int(cfg.nn_horizon_bars),
+                    "lookback_bars": int(cfg.nn_lookback_bars),
+                    "raw_train_rows": 0,
+                    "raw_oos_rows": 0,
+                    "train_rows": 0,
+                    "validation_rows": 0,
+                    "oos_rows": 0,
+                    "train_start": "",
+                    "train_end": "",
+                    "validation_start": "",
+                    "validation_end": "",
+                    "oos_start": "",
+                    "oos_end": "",
+                    "strict_oos_enforced": bool(cfg.nn_require_oos_metadata),
+                    "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                    "mean_sample_weight": np.nan,
+                    "error": "nn_disabled" if not cfg.enable_nn_confirmation else "",
+                }
+            ]
+        )
+    for column in columns:
+        if column not in frame:
+            frame[column] = np.nan if column.endswith("_position") else ""
+    return frame[columns]
+
+
 def nn_training_metrics_frame(cfg: PipelineConfig) -> pd.DataFrame:
     if _LAST_TRAINING_METRICS:
         return pd.DataFrame(_LAST_TRAINING_METRICS)
@@ -536,6 +740,12 @@ def nn_training_metrics_frame(cfg: PipelineConfig) -> pd.DataFrame:
                 "best_epoch": 0,
                 "early_stop_triggered": False,
                 "model_type": cfg.nn_model_type,
+                "learning_rate": np.nan,
+                "train_rows": 0,
+                "validation_rows": 0,
+                "oos_rows": 0,
+                "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                "mean_sample_weight": np.nan,
                 "error": (
                     "" if not cfg.enable_nn_confirmation or torch_available() else "torch_missing"
                 ),
