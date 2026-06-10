@@ -12,7 +12,10 @@ from .hmm_model import (
     HMMFitResult,
     SeedFitDiagnostic,
     build_hmm,
+    convergence_history,
+    final_likelihood_delta,
     map_components_to_semantic_states,
+    model_information_criteria,
     semantic_probabilities,
 )
 from .states import STATE_BEAR, STATE_BULL
@@ -121,9 +124,15 @@ def fit_hmm_candidate(
         "validation_log_likelihood": np.nan,
         "train_aic": np.nan,
         "train_bic": np.nan,
+        "train_ic_source": "",
         "validation_aic": np.nan,
         "validation_bic": np.nan,
+        "validation_ic_source": "",
         "validation_sharpe_proxy": np.nan,
+        "train_log_likelihood_per_row": np.nan,
+        "validation_log_likelihood_per_row": np.nan,
+        "final_likelihood_delta": np.nan,
+        "convergence_history": "",
         "selection_metric": cfg.hmm_model_selection_metric,
         "selection_score": np.nan,
         "selected": False,
@@ -145,9 +154,17 @@ def fit_hmm_candidate(
             str(candidate["model_type"]),
             int(candidate["n_mix"]),
         )
-        train_aic, train_bic = information_criteria(train_ll, n_params, len(inner_train))
-        validation_aic, validation_bic = information_criteria(
-            validation_ll, n_params, len(validation)
+        train_aic, train_bic, train_ic_source = model_information_criteria(
+            model,
+            X_train,
+            n_parameters=n_params,
+            use_native=cfg.hmm_use_native_information_criteria,
+        )
+        validation_aic, validation_bic, validation_ic_source = model_information_criteria(
+            model,
+            X_val,
+            n_parameters=n_params,
+            use_native=cfg.hmm_use_native_information_criteria,
         )
         hidden_train = model.predict(X_train)
         state_map, component_diagnostics = map_components_to_semantic_states(
@@ -162,10 +179,20 @@ def fit_hmm_candidate(
                 "iterations": int(getattr(model.monitor_, "iter", 0)),
                 "train_log_likelihood": train_ll,
                 "validation_log_likelihood": validation_ll,
+                "train_log_likelihood_per_row": train_ll / max(len(inner_train), 1),
+                "validation_log_likelihood_per_row": validation_ll / max(len(validation), 1),
                 "train_aic": train_aic,
                 "train_bic": train_bic,
+                "train_ic_source": train_ic_source,
                 "validation_aic": validation_aic,
                 "validation_bic": validation_bic,
+                "validation_ic_source": validation_ic_source,
+                "final_likelihood_delta": final_likelihood_delta(model),
+                "convergence_history": "|".join(
+                    f"{value:.8g}" for value in convergence_history(model)
+                )
+                if cfg.hmm_store_convergence_history
+                else "",
                 "validation_sharpe_proxy": _validation_sharpe_proxy(
                     model,
                     scaler,
@@ -190,17 +217,37 @@ def _refit_selected(
     selected_row: dict[str, object],
     cfg: PipelineConfig,
     fallback: HMMCandidateFit,
-) -> tuple[GaussianHMM | GMMHMM, StandardScaler, float]:
+) -> tuple[GaussianHMM | GMMHMM, StandardScaler, float, float, float, str]:
     if not cfg.refit_selected_hmm_on_full_train:
         if fallback.model is None or fallback.scaler is None:
             raise RuntimeError("Selected HMM candidate is unavailable.")
-        return fallback.model, fallback.scaler, float(fallback.row["train_log_likelihood"])
+        return (
+            fallback.model,
+            fallback.scaler,
+            float(fallback.row["train_log_likelihood"]),
+            float(fallback.row["train_aic"]),
+            float(fallback.row["train_bic"]),
+            str(fallback.row["train_ic_source"]),
+        )
 
     scaler = StandardScaler()
     X = scaler.fit_transform(train_df[features].values)
     model = build_hmm(cfg, int(selected_row["seed"]), selected_row)
     model.fit(X)
-    return model, scaler, float(model.score(X))
+    n_params = hmm_num_parameters(
+        int(selected_row["n_states"]),
+        len(features),
+        str(selected_row["covariance_type"]),
+        str(selected_row["model_type"]),
+        int(selected_row["n_mix"]),
+    )
+    train_aic, train_bic, train_ic_source = model_information_criteria(
+        model,
+        X,
+        n_parameters=n_params,
+        use_native=cfg.hmm_use_native_information_criteria,
+    )
+    return model, scaler, float(model.score(X)), train_aic, train_bic, train_ic_source
 
 
 def _normalise_metric_name(metric: str) -> str:
@@ -276,7 +323,9 @@ def select_hmm_model(
     selected.row["selection_score"] = _score_candidate_row(selected.row, metric)
     rows = [candidate.row for candidate in candidates]
 
-    model, scaler, train_ll = _refit_selected(train_df, features, selected.row, cfg, selected)
+    model, scaler, train_ll, train_aic, train_bic, train_ic_source = _refit_selected(
+        train_df, features, selected.row, cfg, selected
+    )
     X_full = scaler.transform(train_df[features].values)
     hidden_train = model.predict(X_full)
     state_map, component_diagnostics = map_components_to_semantic_states(
@@ -299,6 +348,12 @@ def select_hmm_model(
             converged=bool(row["converged"]),
             iterations=int(row["iterations"]),
             error=str(row["error"]),
+            convergence_history=tuple(
+                float(value)
+                for value in str(row.get("convergence_history", "")).split("|")
+                if value
+            ),
+            final_likelihood_delta=float(row.get("final_likelihood_delta", np.nan)),
         )
         for row in rows
         if int(row["n_states"]) == int(selected.row["n_states"])
@@ -324,4 +379,11 @@ def select_hmm_model(
         selected_min_covar=float(selected.row["min_covar"]),
         selected_transmat_prior=float(selected.row["transmat_prior"]),
         feature_names=list(features),
+        train_aic=train_aic,
+        train_bic=train_bic,
+        train_ic_source=train_ic_source,
+        convergence_history=convergence_history(model)
+        if cfg.hmm_store_convergence_history
+        else (),
+        final_likelihood_delta=final_likelihood_delta(model),
     )

@@ -47,6 +47,8 @@ class PipelineConfig:
     hmm_init_params_gmm: str = "stmcw"
     hmm_decode_algorithm: str = "viterbi"
     hmm_implementation: str = "scaling"
+    hmm_use_native_information_criteria: bool = True
+    hmm_store_convergence_history: bool = True
     hmm_model_selection_metric: str = "validation_bic"
     hmm_validation_fraction: float = 0.20
     refit_selected_hmm_on_full_train: bool = True
@@ -159,11 +161,18 @@ class PipelineConfig:
     forecast_horizon_bars: int = 20
     forecast_cv_windows: int = 5
     forecast_step_size: int = 21
+    forecast_freq: str = "B"
+    forecast_levels: tuple[int, ...] = (80, 95)
+    forecast_refit_every: int = 1
     enable_volatility_forecasts: bool = True
     vol_model: str = "realised_vol"
     vol_model_candidates: tuple[str, ...] = ("realised_vol", "ewma_vol", "garch", "arch")
     ewma_lambda: float = 0.94
     vol_forecast_horizon_bars: int = 20
+    vol_forecast_refit_frequency: int = 21
+    garch_p: int = 1
+    garch_q: int = 1
+    arch_p: int = 1
     vol_risk_lookback: int = 252
     vol_min_risk_multiplier: float = 0.25
     vol_max_risk_multiplier: float = 1.0
@@ -195,7 +204,8 @@ class PipelineConfig:
     nn_positive_threshold: float = 0.55
     nn_negative_threshold: float = 0.45
     nn_model_type: str = "mlp"
-    nn_model_types: tuple[str, ...] = ("mlp",)
+    nn_model_types: tuple[str, ...] = ("mlp", "conv_lstm")
+    nn_conv_channels: int = 16
     nn_mc_dropout_samples: int = 20
     nn_uncertainty_penalty: float = 1.0
     nn_require_oos_metadata: bool = True
@@ -271,6 +281,7 @@ def load_config(path: str | Path) -> PipelineConfig:
         "universe",
         "observable_forecast_steps",
         "forecast_models",
+        "forecast_levels",
         "vol_model_candidates",
         "nn_hidden_sizes",
         "nn_model_types",

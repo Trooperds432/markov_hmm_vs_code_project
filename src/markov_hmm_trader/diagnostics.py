@@ -84,8 +84,11 @@ def make_window_diagnostic_row(
         "test_log_likelihood": np.nan,
         "train_aic": np.nan,
         "train_bic": np.nan,
+        "train_ic_source": fit.train_ic_source,
         "decode_disagreement_rate": np.nan,
         "train_log_likelihood_per_row": _safe_float(fit.train_log_likelihood / max(len(train), 1)),
+        "final_likelihood_delta": _safe_float(fit.final_likelihood_delta),
+        "convergence_history": "|".join(f"{value:.8g}" for value in fit.convergence_history),
         "best_converged": bool(getattr(model.monitor_, "converged", False)),
         "best_iterations": int(getattr(model.monitor_, "iter", 0)),
         "posterior_entropy_mean": posterior_entropy(next_probs),
@@ -102,6 +105,7 @@ def make_window_diagnostic_row(
         )
         row["train_aic"] = _safe_float(selected.get("train_aic", np.nan))
         row["train_bic"] = _safe_float(selected.get("train_bic", np.nan))
+        row["train_ic_source"] = selected.get("train_ic_source", fit.train_ic_source)
 
     stationary = stationary_distribution(fit)
 
@@ -148,6 +152,10 @@ def make_seed_diagnostic_rows(
                 "score": _safe_float(item.score),
                 "converged": bool(item.converged),
                 "iterations": int(item.iterations),
+                "final_likelihood_delta": _safe_float(item.final_likelihood_delta),
+                "convergence_history": "|".join(
+                    f"{value:.8g}" for value in item.convergence_history
+                ),
                 "error": item.error,
                 "is_best": int(item.seed == fit.best_seed),
             }

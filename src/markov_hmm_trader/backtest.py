@@ -167,8 +167,8 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
 
         next_probs = semantic_probabilities(next_probs_raw, fit.state_map)
 
-        decoded_raw = model.predict(X_test)
-        decoded_map_raw = posteriors_raw.argmax(axis=1)
+        _, decoded_raw = model.decode(X_test, algorithm="viterbi")
+        _, decoded_map_raw = model.decode(X_test, algorithm="map")
         decoded = [fit.state_map[int(x)] for x in decoded_raw]
 
         idx = test.index

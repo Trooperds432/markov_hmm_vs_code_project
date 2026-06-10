@@ -9,14 +9,6 @@ from src.markov_hmm_trader.config import (
     load_config,
 )
 from src.markov_hmm_trader.dependencies import dependency_status_text
-from src.markov_hmm_trader.runner import (
-    run_model_comparison_mode,
-    run_nested_mode,
-    run_paper_mode,
-    run_portfolio_mode,
-    run_single,
-    run_universe,
-)
 
 CONFIG_PATH = Path("configs/default.json")
 OUTPUT_DIR = Path("outputs")
@@ -71,6 +63,15 @@ def main() -> None:
     if args.check_deps:
         print(dependency_status_text())
         return
+
+    from src.markov_hmm_trader.runner import (
+        run_model_comparison_mode,
+        run_nested_mode,
+        run_paper_mode,
+        run_portfolio_mode,
+        run_single,
+        run_universe,
+    )
 
     cfg = load_config(args.config)
     cfg = apply_profile(cfg, args.profile)

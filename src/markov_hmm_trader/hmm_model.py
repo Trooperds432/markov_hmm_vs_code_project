@@ -18,6 +18,8 @@ class SeedFitDiagnostic:
     converged: bool
     iterations: int
     error: str = ""
+    convergence_history: tuple[float, ...] = ()
+    final_likelihood_delta: float = np.nan
 
 
 @dataclass
@@ -39,6 +41,44 @@ class HMMFitResult:
     selected_min_covar: float = 1e-3
     selected_transmat_prior: float = 1.0
     feature_names: list[str] = field(default_factory=list)
+    train_aic: float = np.nan
+    train_bic: float = np.nan
+    train_ic_source: str = ""
+    convergence_history: tuple[float, ...] = ()
+    final_likelihood_delta: float = np.nan
+
+
+def convergence_history(model: GaussianHMM | GMMHMM) -> tuple[float, ...]:
+    history = getattr(getattr(model, "monitor_", None), "history", ())
+    return tuple(float(value) for value in history)
+
+
+def final_likelihood_delta(model: GaussianHMM | GMMHMM) -> float:
+    history = convergence_history(model)
+    if len(history) < 2:
+        return np.nan
+    return float(history[-1] - history[-2])
+
+
+def model_information_criteria(
+    model: GaussianHMM | GMMHMM,
+    X: np.ndarray,
+    n_parameters: int | None = None,
+    use_native: bool = True,
+) -> tuple[float, float, str]:
+    if use_native and hasattr(model, "aic") and hasattr(model, "bic"):
+        try:
+            return float(model.aic(X)), float(model.bic(X)), "hmmlearn_native"
+        except Exception:
+            pass
+
+    if n_parameters is None or X.shape[0] <= 0:
+        return np.nan, np.nan, "unavailable"
+
+    log_likelihood = float(model.score(X))
+    aic = 2.0 * n_parameters - 2.0 * log_likelihood
+    bic = np.log(max(X.shape[0], 1)) * n_parameters - 2.0 * log_likelihood
+    return float(aic), float(bic), "local_fallback"
 
 
 def build_hmm(
@@ -118,6 +158,7 @@ def fit_hmm_best_of_seeds(
             score = model.score(X)
             converged = bool(getattr(model.monitor_, "converged", False))
             iterations = int(getattr(model.monitor_, "iter", 0))
+            history = convergence_history(model)
 
             seed_diagnostics.append(
                 SeedFitDiagnostic(
@@ -125,6 +166,8 @@ def fit_hmm_best_of_seeds(
                     score=float(score),
                     converged=converged,
                     iterations=iterations,
+                    convergence_history=history if cfg.hmm_store_convergence_history else (),
+                    final_likelihood_delta=final_likelihood_delta(model),
                 )
             )
 
@@ -160,6 +203,12 @@ def fit_hmm_best_of_seeds(
     component_occupancy = {
         component: values["occupancy"] for component, values in component_diagnostics.items()
     }
+    train_aic, train_bic, ic_source = model_information_criteria(
+        best_model,
+        X,
+        use_native=cfg.hmm_use_native_information_criteria,
+    )
+    best_history = convergence_history(best_model)
 
     return HMMFitResult(
         model=best_model,
@@ -178,6 +227,11 @@ def fit_hmm_best_of_seeds(
         selected_min_covar=cfg.hmm_min_covar,
         selected_transmat_prior=cfg.hmm_transmat_prior,
         feature_names=list(features),
+        train_aic=train_aic,
+        train_bic=train_bic,
+        train_ic_source=ic_source,
+        convergence_history=best_history if cfg.hmm_store_convergence_history else (),
+        final_likelihood_delta=final_likelihood_delta(best_model),
     )
 
 
