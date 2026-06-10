@@ -209,6 +209,12 @@ class PipelineConfig:
     nn_mc_dropout_samples: int = 20
     nn_uncertainty_penalty: float = 1.0
     nn_require_oos_metadata: bool = True
+    nn_use_time_decay_weights: bool = True
+    nn_time_decay_factor: float = 0.001
+    nn_early_stopping_patience: int = 5
+    nn_lr_patience: int = 2
+    nn_lr_factor: float = 0.5
+    nn_min_delta: float = 1e-4
     ensemble_mode: str = "hmm_only"
     hmm_weight: float = 0.65
     nn_weight: float = 0.35

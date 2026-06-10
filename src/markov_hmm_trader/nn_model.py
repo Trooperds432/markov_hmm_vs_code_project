@@ -8,6 +8,7 @@ import pandas as pd
 from .config import PipelineConfig
 
 _LAST_TRAINING_METRICS: list[dict[str, object]] = []
+_LAST_SPLIT_METADATA: list[dict[str, object]] = []
 
 
 def torch_available() -> bool:
@@ -50,6 +51,25 @@ class SequenceDataset:
     X: np.ndarray
     y: np.ndarray
     positions: np.ndarray
+    sample_weight: np.ndarray
+
+
+def make_time_decay_weights(
+    positions: np.ndarray,
+    anchor_position: int,
+    decay_factor: float,
+    enabled: bool = True,
+) -> np.ndarray:
+    """Return recency weights similar to the local LSTM training pipeline."""
+    positions = np.asarray(positions, dtype=float)
+    if positions.size == 0 or not enabled:
+        return np.ones(positions.shape, dtype=np.float32)
+    ages = np.maximum(float(anchor_position) - positions, 0.0)
+    weights = np.exp(-float(decay_factor) * ages)
+    mean_weight = float(np.nanmean(weights))
+    if np.isfinite(mean_weight) and mean_weight > 0.0:
+        weights = weights / mean_weight
+    return weights.astype(np.float32)
 
 
 def make_sequence_dataset(
@@ -57,10 +77,12 @@ def make_sequence_dataset(
     labels: np.ndarray,
     positions: np.ndarray,
     lookback: int,
+    sample_weights: np.ndarray | None = None,
 ) -> SequenceDataset:
     X_rows = []
     y_rows = []
     pos_rows = []
+    weight_rows = []
     valid_positions = set(int(position) for position in positions)
     for position in positions:
         position = int(position)
@@ -76,17 +98,38 @@ def make_sequence_dataset(
         X_rows.append(window)
         y_rows.append(label)
         pos_rows.append(position)
+        weight_rows.append(1.0 if sample_weights is None else sample_weights[position])
     if not X_rows:
         return SequenceDataset(
             np.empty((0, lookback, matrix.shape[1]), dtype=np.float32),
             np.empty((0,), dtype=np.float32),
             np.empty((0,), dtype=int),
+            np.empty((0,), dtype=np.float32),
         )
     return SequenceDataset(
         np.asarray(X_rows, dtype=np.float32),
         np.asarray(y_rows, dtype=np.float32),
         np.asarray(pos_rows, dtype=int),
+        np.asarray(weight_rows, dtype=np.float32),
     )
+
+
+def _position_date(df: pd.DataFrame, position: object) -> str:
+    if position is None or (isinstance(position, float) and not np.isfinite(position)):
+        return ""
+    try:
+        value = df.index[int(position)]
+    except (IndexError, TypeError, ValueError):
+        return ""
+    try:
+        return pd.Timestamp(value).date().isoformat()
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _horizon_suffix(horizon_bars: int) -> str:
+    mapping = {1: "1d", 5: "1w", 20: "1m", 21: "1m", 60: "3m", 63: "3m", 126: "6m"}
+    return mapping.get(int(horizon_bars), f"{int(horizon_bars)}b")
 
 
 def _torch_modules(cfg: PipelineConfig, n_features: int, lookback: int):
