@@ -374,8 +374,12 @@ def apply_quick_mode(cfg: PipelineConfig) -> PipelineConfig:
         hmm_state_candidates=tuple(cfg.hmm_state_candidates[:1]) or (cfg.n_states,),
         hmm_covariance_candidates=tuple(cfg.hmm_covariance_candidates[:1])
         or (cfg.covariance_type,),
+        forecast_cv_windows=min(cfg.forecast_cv_windows, 2),
+        forecast_step_size=max(cfg.forecast_step_size, cfg.forecast_horizon_bars),
+        vol_forecast_refit_frequency=max(cfg.vol_forecast_refit_frequency, 42),
         nested_trials_per_window=min(cfg.nested_trials_per_window, 5),
         nn_epochs=min(cfg.nn_epochs, 3),
+        nn_mc_dropout_samples=min(cfg.nn_mc_dropout_samples, 5),
     )
 
 

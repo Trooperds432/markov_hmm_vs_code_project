@@ -9,7 +9,10 @@ from .states import STATE_BEAR, STATE_BULL, STATE_SIDE
 
 def ensemble_signal_for_row(row: pd.Series, cfg: PipelineConfig) -> float:
     hmm_signal = float(row.get(STATE_BULL, 0.0) - row.get(STATE_BEAR, 0.0))
-    nn_probability = row.get("nn_probability_positive", np.nan)
+    nn_probability = row.get(
+        "nn_adjusted_probability",
+        row.get("nn_probability_positive", np.nan),
+    )
     nn_signal = 0.0
     if np.isfinite(nn_probability):
         if nn_probability >= cfg.nn_positive_threshold:

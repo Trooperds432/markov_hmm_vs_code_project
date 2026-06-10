@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 
 from src.markov_hmm_trader.config import PipelineConfig
+from src.markov_hmm_trader.hmm_model import convergence_history, model_information_criteria
 from src.markov_hmm_trader.model_selection import (
     hmm_num_parameters,
     information_criteria,
@@ -44,6 +47,46 @@ def test_information_criteria_and_parameter_count():
     assert params > 0
     assert aic > 0
     assert bic > aic
+
+
+def test_native_information_criteria_preferred_when_available():
+    model = SimpleNamespace(
+        aic=lambda X: 12.0,
+        bic=lambda X: 15.0,
+        score=lambda X: -100.0,
+    )
+
+    aic, bic, source = model_information_criteria(
+        model,
+        np.ones((10, 2)),
+        n_parameters=3,
+        use_native=True,
+    )
+
+    assert aic == 12.0
+    assert bic == 15.0
+    assert source == "hmmlearn_native"
+
+
+def test_information_criteria_falls_back_when_native_unavailable():
+    model = SimpleNamespace(score=lambda X: -100.0)
+
+    aic, bic, source = model_information_criteria(
+        model,
+        np.ones((10, 2)),
+        n_parameters=3,
+        use_native=True,
+    )
+
+    assert aic == 206.0
+    assert bic > aic
+    assert source == "local_fallback"
+
+
+def test_convergence_history_reads_monitor_history():
+    model = SimpleNamespace(monitor_=SimpleNamespace(history=[-3.0, -2.0, -1.5]))
+
+    assert convergence_history(model) == (-3.0, -2.0, -1.5)
 
 
 def test_select_hmm_model_marks_one_candidate_selected():

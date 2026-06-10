@@ -134,6 +134,7 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         df[col] = np.nan
 
     df["hidden_state"] = pd.Series(index=df.index, dtype="object")
+    df["hmm_window_id"] = np.nan
     df["target_position"] = 0.0
 
     start_idx = cfg.train_window
@@ -174,6 +175,7 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         idx = test.index
         df.loc[idx, STATE_ORDER] = next_probs[STATE_ORDER].values
         df.loc[idx, "hidden_state"] = decoded
+        df.loc[idx, "hmm_window_id"] = window_id
 
         if cfg.enable_diagnostics:
             window_row = make_window_diagnostic_row(window_id, train, test, fit, next_probs)
