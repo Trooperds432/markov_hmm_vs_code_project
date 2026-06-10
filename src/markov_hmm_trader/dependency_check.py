@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import importlib.util
-from dataclasses import dataclass
 
 import pandas as pd
 
+DEPENDENCY_GROUPS = {
+    "hmmlearn": ("hmmlearn", "core HMM engine", False),
+    "statsforecast": ("statsforecast", "optional forecast benchmarks", True),
+    "torch": ("torch", "optional neural-network confirmation", True),
+    "statsmodels": ("statsmodels", "optional MarkovRegression benchmark", True),
+    "yfinance": ("yfinance", "market data download", False),
+}
 
-@dataclass(frozen=True)
-class DependencySpec:
-    package: str
-    import_name: str
-    required_for: str
-    optional: bool
 
-
-DEPENDENCIES: tuple[DependencySpec, ...] = (
-    DependencySpec("hmmlearn", "hmmlearn", "core HMM engine", False),
-    DependencySpec("statsforecast", "statsforecast", "optional forecast
+def dependency_health_frame() -> pd.DataFrame:
+    rows
