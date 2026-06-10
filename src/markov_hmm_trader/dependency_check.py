@@ -16,5 +16,4 @@ class DependencySpec:
 
 DEPENDENCIES: tuple[DependencySpec, ...] = (
     DependencySpec("hmmlearn", "hmmlearn", "core HMM engine", False),
-    DependencySpec("statsforecast", "statsforecast", "optional forecast benchmarks", True),
-    Dependency
+    DependencySpec("statsforecast", "statsforecast", "optional forecast
