@@ -24,6 +24,11 @@ Optional forecast benchmarks require:
 pip install -r requirements-forecast.txt
 ```
 
+The advanced adapters use package APIs and implementation patterns from the connected
+`hmmlearn`, `statsforecast`, and LSTM stock-predictor repos. The project does not
+vendor those repositories or depend directly on GitHub forks; optional integrations
+activate only when their normal Python packages are installed.
+
 Check optional dependency health:
 
 ```bash
