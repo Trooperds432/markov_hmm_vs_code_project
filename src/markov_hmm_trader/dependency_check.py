@@ -8,12 +8,4 @@ DEPENDENCY_GROUPS = {
     "hmmlearn": ("hmmlearn", "core HMM engine", False),
     "statsforecast": ("statsforecast", "optional forecast benchmarks", True),
     "torch": ("torch", "optional neural-network confirmation", True),
-    "statsmodels": ("statsmodels", "optional MarkovRegression benchmark", True),
-    "yfinance": ("yfinance", "market data download", False),
-}
-
-
-def dependency_health_frame() -> pd.DataFrame:
-    rows = []
-    for package, (import_name, required_for, optional) in DEPENDENCY_GROUPS.items():
-       
+    "statsmodels": ("statsmodels", "optional Mark
