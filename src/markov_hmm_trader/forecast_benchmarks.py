@@ -202,7 +202,10 @@ def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, 
     for model_name in cfg.forecast_models:
         normalized = model_name.lower()
         error = ""
-        if imports is None:
+        if imports is None and normalized == "naive":
+            predictions = _naive_forecast(df, cfg, normalized)
+            metric = _metric_against_realised(df, predictions, cfg)
+        elif imports is None:
             error = import_error or "statsforecast_missing"
             predictions = _naive_forecast(df, cfg, normalized, error=error)
             metric = _metric_against_realised(df, predictions, cfg)
