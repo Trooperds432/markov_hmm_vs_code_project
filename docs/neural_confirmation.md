@@ -7,9 +7,15 @@ The NN output contract includes predictive mean probability, predictive standard
 deviation, and `adjusted_prob = pred_prob - penalty * pred_prob_std`. The adjusted
 probability is used for conservative signal gating.
 
-Planned backends share one output contract:
+Backends share one output contract:
 
 - `mlp`
-- `conv1d_lstm`
+- `conv_lstm`
 
-Outputs include `nn_predictions.csv`, `nn_training_metrics.csv`, and ensemble files.
+The Torch path translates the local LSTM stock-predictor repo's practical research
+patterns: sequence windows, strict train/validation/OOS metadata, MC-dropout inference,
+`adjusted_prob = pred_prob - penalty * pred_prob_std`, and optional exponential
+recency weights for training samples.
+
+Outputs include `nn_predictions.csv`, `nn_forecasts.csv`, `nn_oos_split_info.csv`,
+`nn_training_metrics.csv`, and ensemble files.

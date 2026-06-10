@@ -107,7 +107,7 @@ def test_nn_oos_split_info_reports_structured_skip(monkeypatch):
     split_info = nn_oos_split_info_frame(cfg)
 
     assert split_info.loc[0, "error"] == "torch_missing"
-    assert split_info.loc[0, "strict_oos_enforced"] is True
+    assert bool(split_info.loc[0, "strict_oos_enforced"]) is True
 
 
 def test_nn_forecasts_frame_uses_lstm_compatible_columns():

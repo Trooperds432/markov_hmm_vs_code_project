@@ -221,18 +221,12 @@ def _train_predict_window(
         "train_rows": 0,
         "validation_rows": 0,
         "oos_rows": int(len(test_ds.positions)),
-        "train_start_position": (
-            int(train_ds.positions[0]) if len(train_ds.positions) else np.nan
-        ),
+        "train_start_position": (int(train_ds.positions[0]) if len(train_ds.positions) else np.nan),
         "train_end_position": np.nan,
         "validation_start_position": np.nan,
         "validation_end_position": np.nan,
-        "oos_start_position": (
-            int(test_ds.positions[0]) if len(test_ds.positions) else np.nan
-        ),
-        "oos_end_position": (
-            int(test_ds.positions[-1]) if len(test_ds.positions) else np.nan
-        ),
+        "oos_start_position": (int(test_ds.positions[0]) if len(test_ds.positions) else np.nan),
+        "oos_end_position": (int(test_ds.positions[-1]) if len(test_ds.positions) else np.nan),
         "strict_oos_enforced": bool(cfg.nn_require_oos_metadata),
         "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
         "mean_sample_weight": (

@@ -41,6 +41,8 @@ Risk and overfit outputs:
 NN and ensemble outputs:
 
 - `nn_predictions.csv`
+- `nn_forecasts.csv`
+- `nn_oos_split_info.csv`
 - `nn_training_metrics.csv`
 - `ensemble_predictions.csv`
 - `ensemble_diagnostics.csv`
