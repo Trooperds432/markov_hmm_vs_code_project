@@ -187,22 +187,78 @@ def _train_predict_window(
     test_positions: np.ndarray,
     cfg: PipelineConfig,
     fold_id: int,
-) -> tuple[pd.DataFrame, list[dict[str, object]]]:
+) -> tuple[pd.DataFrame, list[dict[str, object]], dict[str, object]]:
     import torch
     from torch import nn
 
     lookback = max(int(cfg.nn_lookback_bars), 2)
-    train_ds = make_sequence_dataset(matrix, labels, train_positions, lookback)
+    full_sample_weights = np.ones(len(labels), dtype=np.float32)
+    if len(train_positions) > 0:
+        full_sample_weights[train_positions] = make_time_decay_weights(
+            train_positions,
+            anchor_position=int(train_positions.max()),
+            decay_factor=float(cfg.nn_time_decay_factor),
+            enabled=bool(cfg.nn_use_time_decay_weights),
+        )
+    train_ds = make_sequence_dataset(
+        matrix,
+        labels,
+        train_positions,
+        lookback,
+        sample_weights=full_sample_weights,
+    )
     test_ds = make_sequence_dataset(matrix, labels, test_positions, lookback)
     metrics: list[dict[str, object]] = []
+    split_info: dict[str, object] = {
+        "run_id": "",
+        "window_id": fold_id,
+        "fold_id": fold_id,
+        "model_type": cfg.nn_model_type,
+        "horizon_bars": int(cfg.nn_horizon_bars),
+        "lookback_bars": lookback,
+        "raw_train_rows": int(len(train_positions)),
+        "raw_oos_rows": int(len(test_positions)),
+        "train_rows": 0,
+        "validation_rows": 0,
+        "oos_rows": int(len(test_ds.positions)),
+        "train_start_position": (
+            int(train_ds.positions[0]) if len(train_ds.positions) else np.nan
+        ),
+        "train_end_position": np.nan,
+        "validation_start_position": np.nan,
+        "validation_end_position": np.nan,
+        "oos_start_position": (
+            int(test_ds.positions[0]) if len(test_ds.positions) else np.nan
+        ),
+        "oos_end_position": (
+            int(test_ds.positions[-1]) if len(test_ds.positions) else np.nan
+        ),
+        "strict_oos_enforced": bool(cfg.nn_require_oos_metadata),
+        "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+        "mean_sample_weight": (
+            float(np.mean(train_ds.sample_weight)) if len(train_ds.sample_weight) else np.nan
+        ),
+        "error": "",
+    }
     if len(train_ds.y) < max(10, int(cfg.nn_batch_size // 2)) or len(test_ds.positions) == 0:
-        return pd.DataFrame(), metrics
+        split_info["error"] = "insufficient_oos_training_data"
+        return pd.DataFrame(), metrics, split_info
 
     val_count = max(1, int(round(len(train_ds.y) * float(cfg.nn_validation_split))))
     val_count = min(val_count, max(len(train_ds.y) - 1, 1))
     train_count = len(train_ds.y) - val_count
+    split_info.update(
+        {
+            "train_rows": int(train_count),
+            "validation_rows": int(val_count),
+            "train_end_position": int(train_ds.positions[train_count - 1]),
+            "validation_start_position": int(train_ds.positions[train_count]),
+            "validation_end_position": int(train_ds.positions[-1]),
+        }
+    )
     X_train = torch.tensor(train_ds.X[:train_count], dtype=torch.float32)
     y_train = torch.tensor(train_ds.y[:train_count], dtype=torch.float32)
+    w_train = torch.tensor(train_ds.sample_weight[:train_count], dtype=torch.float32)
     X_val = torch.tensor(train_ds.X[train_count:], dtype=torch.float32)
     y_val = torch.tensor(train_ds.y[train_count:], dtype=torch.float32)
     X_test = torch.tensor(test_ds.X, dtype=torch.float32)
@@ -210,11 +266,27 @@ def _train_predict_window(
     torch.manual_seed(int(cfg.random_seeds[0] if cfg.random_seeds else 7) + fold_id)
     model = _torch_modules(cfg, matrix.shape[1], lookback)
     optimiser = torch.optim.Adam(model.parameters(), lr=float(cfg.nn_learning_rate))
-    loss_fn = nn.BCEWithLogitsLoss()
+    lr_factor = min(max(float(cfg.nn_lr_factor), 1e-6), 0.999)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimiser,
+        mode="min",
+        factor=lr_factor,
+        patience=max(int(cfg.nn_lr_patience), 0),
+    )
+    loss_fn = nn.BCEWithLogitsLoss(reduction="none")
     best_state = None
     best_val = np.inf
     best_epoch = 0
     batch_size = max(int(cfg.nn_batch_size), 1)
+    min_delta = max(float(cfg.nn_min_delta), 0.0)
+    early_patience = max(int(cfg.nn_early_stopping_patience), 0)
+    epochs_without_improvement = 0
+
+    def weighted_loss(logits, targets, weights=None):
+        losses = loss_fn(logits, targets)
+        if weights is None:
+            return losses.mean()
+        return (losses * weights).sum() / weights.sum().clamp_min(1e-8)
 
     for epoch in range(1, int(cfg.nn_epochs) + 1):
         model.train()
@@ -223,19 +295,24 @@ def _train_predict_window(
         for start in range(0, len(X_train), batch_size):
             batch = permutation[start : start + batch_size]
             optimiser.zero_grad()
-            loss = loss_fn(model(X_train[batch]), y_train[batch])
+            loss = weighted_loss(model(X_train[batch]), y_train[batch], w_train[batch])
             loss.backward()
             optimiser.step()
             train_losses.append(float(loss.detach().cpu()))
 
         model.eval()
         with torch.no_grad():
-            val_loss = float(loss_fn(model(X_val), y_val).detach().cpu())
+            val_loss = float(weighted_loss(model(X_val), y_val).detach().cpu())
         train_loss = float(np.mean(train_losses)) if train_losses else np.nan
-        if val_loss < best_val:
+        improved = val_loss < best_val - min_delta
+        if improved:
             best_val = val_loss
             best_epoch = epoch
             best_state = {key: value.detach().clone() for key, value in model.state_dict().items()}
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+        scheduler.step(val_loss)
         metrics.append(
             {
                 "run_id": "",
@@ -246,9 +323,18 @@ def _train_predict_window(
                 "best_epoch": best_epoch,
                 "early_stop_triggered": False,
                 "model_type": cfg.nn_model_type,
+                "learning_rate": float(optimiser.param_groups[0]["lr"]),
+                "train_rows": int(train_count),
+                "validation_rows": int(val_count),
+                "oos_rows": int(len(test_ds.positions)),
+                "use_time_decay_weights": bool(cfg.nn_use_time_decay_weights),
+                "mean_sample_weight": float(np.mean(train_ds.sample_weight[:train_count])),
                 "error": "",
             }
         )
+        if early_patience > 0 and epochs_without_improvement >= early_patience:
+            metrics[-1]["early_stop_triggered"] = True
+            break
 
     if best_state is not None:
         model.load_state_dict(best_state)
@@ -284,6 +370,7 @@ def _train_predict_window(
             }
         ),
         metrics,
+        split_info,
     )
 
 
