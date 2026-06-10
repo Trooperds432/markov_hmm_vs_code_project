@@ -14,4 +14,6 @@ DEPENDENCY_GROUPS = {
 
 
 def dependency_health_frame() -> pd.DataFrame:
-    rows
+    rows = []
+    for package, (import_name, required_for, optional) in DEPENDENCY_GROUPS.items():
+       
