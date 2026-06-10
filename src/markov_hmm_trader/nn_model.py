@@ -90,7 +90,6 @@ def make_sequence_dataset(
 
 
 def _torch_modules(cfg: PipelineConfig, n_features: int, lookback: int):
-    import torch
     from torch import nn
 
     class MLP(nn.Module):

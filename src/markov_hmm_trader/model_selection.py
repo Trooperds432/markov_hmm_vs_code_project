@@ -188,11 +188,11 @@ def fit_hmm_candidate(
                 "validation_bic": validation_bic,
                 "validation_ic_source": validation_ic_source,
                 "final_likelihood_delta": final_likelihood_delta(model),
-                "convergence_history": "|".join(
-                    f"{value:.8g}" for value in convergence_history(model)
-                )
-                if cfg.hmm_store_convergence_history
-                else "",
+                "convergence_history": (
+                    "|".join(f"{value:.8g}" for value in convergence_history(model))
+                    if cfg.hmm_store_convergence_history
+                    else ""
+                ),
                 "validation_sharpe_proxy": _validation_sharpe_proxy(
                     model,
                     scaler,
@@ -382,8 +382,6 @@ def select_hmm_model(
         train_aic=train_aic,
         train_bic=train_bic,
         train_ic_source=train_ic_source,
-        convergence_history=convergence_history(model)
-        if cfg.hmm_store_convergence_history
-        else (),
+        convergence_history=convergence_history(model) if cfg.hmm_store_convergence_history else (),
         final_likelihood_delta=final_likelihood_delta(model),
     )

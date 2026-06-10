@@ -33,9 +33,9 @@ def _try_import_vol_model(model_name: str) -> tuple[type | None, str]:
     try:
         models = import_module("statsforecast.models")
         if model_name == "garch":
-            return getattr(models, "GARCH"), ""
+            return models.GARCH, ""
         if model_name == "arch":
-            return getattr(models, "ARCH"), ""
+            return models.ARCH, ""
     except Exception as err:
         return None, f"statsforecast_missing:{type(err).__name__}"
     return None, f"unsupported_vol_model:{model_name}"
@@ -87,8 +87,10 @@ def _statsforecast_volatility_forecast(
         _horizon_variance_from_annual_sigma(fallback_sigma, cfg)
     )
     if annual_sigma.notna().sum() == 0:
-        return fallback_sigma, _horizon_variance_from_annual_sigma(fallback_sigma, cfg), (
-            f"statsforecast_failed:{errors[-1]}" if errors else "statsforecast_no_forecasts"
+        return (
+            fallback_sigma,
+            _horizon_variance_from_annual_sigma(fallback_sigma, cfg),
+            (f"statsforecast_failed:{errors[-1]}" if errors else "statsforecast_no_forecasts"),
         )
     if errors:
         return annual_sigma, horizon_variance, f"partial_statsforecast_fallback:{errors[-1]}"

@@ -26,11 +26,11 @@ def _try_import_statsforecast() -> tuple[StatsForecastImports | None, str]:
         models = import_module("statsforecast.models")
         return (
             StatsForecastImports(
-                statsforecast=getattr(core, "StatsForecast"),
-                naive=getattr(models, "Naive"),
-                auto_arima=getattr(models, "AutoARIMA"),
-                auto_ets=getattr(models, "AutoETS"),
-                auto_theta=getattr(models, "AutoTheta"),
+                statsforecast=core.StatsForecast,
+                naive=models.Naive,
+                auto_arima=models.AutoARIMA,
+                auto_ets=models.AutoETS,
+                auto_theta=models.AutoTheta,
             ),
             "",
         )
@@ -44,7 +44,9 @@ def _instantiate(model_cls: type, **kwargs: Any) -> Any:
     return model_cls(**accepted)
 
 
-def _statsforecast_model(model_name: str, imports: StatsForecastImports, cfg: PipelineConfig) -> Any:
+def _statsforecast_model(
+    model_name: str, imports: StatsForecastImports, cfg: PipelineConfig
+) -> Any:
     normalized = model_name.lower()
     alias = normalized
     if normalized == "naive":
@@ -66,9 +68,7 @@ def _naive_forecast(
 ) -> pd.DataFrame:
     horizon = int(cfg.forecast_horizon_bars)
     mean = df["ret_1"].rolling(max(horizon, 2)).mean().shift(1).fillna(0.0) * horizon
-    sigma = df["ret_1"].rolling(max(horizon, 2)).std(ddof=0).shift(1).fillna(0.0) * np.sqrt(
-        horizon
-    )
+    sigma = df["ret_1"].rolling(max(horizon, 2)).std(ddof=0).shift(1).fillna(0.0) * np.sqrt(horizon)
     return pd.DataFrame(
         {
             "date": df.index.date.astype(str),
@@ -231,10 +231,14 @@ def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, 
             }
         )
 
-    predictions = pd.concat(prediction_frames, ignore_index=True) if prediction_frames else pd.DataFrame()
+    predictions = (
+        pd.concat(prediction_frames, ignore_index=True) if prediction_frames else pd.DataFrame()
+    )
     comparison = pd.DataFrame(comparison_rows)
     if not comparison.empty:
-        selectable = comparison[comparison["cv_metric_value"].replace([np.inf, -np.inf], np.nan).notna()]
+        selectable = comparison[
+            comparison["cv_metric_value"].replace([np.inf, -np.inf], np.nan).notna()
+        ]
         if selectable.empty:
             selected_index = comparison.index[0]
         else:
@@ -244,7 +248,11 @@ def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, 
         selected_predictions = predictions[predictions["model_name"] == selected_model].copy()
         selected_predictions.index = pd.to_datetime(selected_predictions["date"])
         primary_signal = (
-            selected_predictions["direction_signal"].groupby(level=0).last().reindex(df.index).fillna(0.0)
+            selected_predictions["direction_signal"]
+            .groupby(level=0)
+            .last()
+            .reindex(df.index)
+            .fillna(0.0)
         )
     else:
         primary_signal = pd.Series(0.0, index=df.index)
@@ -254,7 +262,9 @@ def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, 
             "date": df.index.date.astype(str),
             "hmm_signal": df.get("hmm_signal", pd.Series(0.0, index=df.index)).values,
             "forecast_signal": primary_signal.values,
-            "garch_risk_multiplier": df.get("vol_risk_multiplier", pd.Series(1.0, index=df.index)).values,
+            "garch_risk_multiplier": df.get(
+                "vol_risk_multiplier", pd.Series(1.0, index=df.index)
+            ).values,
             "final_confirmation_flag": True,
         },
         index=df.index,
