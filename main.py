@@ -13,3 +13,4 @@ from src.markov_hmm_trader.runner import (
     run_model_comparison_mode,
     run_nested_mode,
     run_paper_mode,
+    run
