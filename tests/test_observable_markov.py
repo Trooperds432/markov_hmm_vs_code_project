@@ -59,7 +59,8 @@ def test_observable_markov_runner_outputs_contracts():
     assert {"date", "observable_state", "signal", "position"}.issubset(
         outputs["observable_markov_baseline"].columns
     )
-    assert round(
-        float(outputs["observable_markov_stationary_distribution"]["probability"].sum()), 6
-    ) == 1.0
+    assert (
+        round(float(outputs["observable_markov_stationary_distribution"]["probability"].sum()), 6)
+        == 1.0
+    )
     assert not outputs["observable_markov_equity_curve"].empty

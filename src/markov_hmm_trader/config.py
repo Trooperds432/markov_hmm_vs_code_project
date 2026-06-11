@@ -288,16 +288,12 @@ def load_config(path: str | Path) -> PipelineConfig:
         "overfit_train_validation_gap_warn" in raw
         and "overfit_train_validation_gap_threshold" not in raw
     ):
-        raw["overfit_train_validation_gap_threshold"] = raw[
-            "overfit_train_validation_gap_warn"
-        ]
+        raw["overfit_train_validation_gap_threshold"] = raw["overfit_train_validation_gap_warn"]
     if (
         "overfit_validation_test_gap_warn" in raw
         and "overfit_validation_test_gap_threshold" not in raw
     ):
-        raw["overfit_validation_test_gap_threshold"] = raw[
-            "overfit_validation_test_gap_warn"
-        ]
+        raw["overfit_validation_test_gap_threshold"] = raw["overfit_validation_test_gap_warn"]
 
     valid_names = {field.name for field in fields(PipelineConfig)}
     clean = {k: v for k, v in raw.items() if k in valid_names}

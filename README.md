@@ -38,6 +38,10 @@ Check optional dependency health:
 python main.py --check-deps
 ```
 
+The health check is non-fatal and reports each optional group as `available` or
+`missing`; missing optional packages create structured CSV warning rows when their
+research layers are enabled.
+
 ## Quick Start
 
 Default single-symbol run:
@@ -99,9 +103,10 @@ Diagnostics:
 - `hmm_synthetic_sample_stress.csv`: fitted-HMM sample-path stress rows
 - `factor_data_coverage.csv`: downloaded factor symbol coverage
 - `feature_summary.csv`: feature distribution and missingness summary
+- `observable_markov_baseline.csv`, `observable_markov_stationary_distribution.csv`: transparent Markov baseline labels and stationary probabilities
 - `nn_predictions.csv`, `nn_forecasts.csv`, `nn_oos_split_info.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics
 - `volatility_forecasts.csv`: realised, EWMA, GARCH, and ARCH volatility forecasts
-- `model_overfit_report.csv`: train/validation/test metric gap warnings
+- `model_overfit_report.csv`: train/validation/test metric gap warnings with explicit reasons such as `missing_metric`, `train_validation_gap_exceeds_threshold`, and `validation_test_gap_exceeds_threshold`
 
 Stress outputs:
 
@@ -116,7 +121,7 @@ Other modes:
 - Nested: `nested_window_results.csv`, `nested_candidate_results.csv`, `nested_oos_equity_curve.csv`
 - Portfolio: `portfolio_equity_curve.csv`, `portfolio_weights.csv`, `portfolio_trades.csv`, `portfolio_stats.csv`, `portfolio_asset_signals.csv`
 - Model comparison: `model_comparison.csv`, `model_comparison_equity_curves.csv`, `model_state_comparison.csv`, optional `model_comparison_equity.png`
-- Paper simulation: `paper_orders.csv`, `paper_positions.csv`, `paper_equity.csv`, `paper_risk_checks.csv`
+- Paper simulation: `paper_orders.csv`, `paper_positions.csv`, `paper_daily_equity.csv`, `paper_equity.csv`, `paper_risk_checks.csv`
 - Experiments: `experiments/runs/...` config snapshots, environment info, copied CSVs, and `experiments/registry/model_registry.csv`
 
 ## Common Errors

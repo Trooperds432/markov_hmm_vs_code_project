@@ -49,9 +49,7 @@ def overfit_row(
     )
     reasons = []
     if not (
-        np.isfinite(train_metric)
-        and np.isfinite(validation_metric)
-        and np.isfinite(test_metric)
+        np.isfinite(train_metric) and np.isfinite(validation_metric) and np.isfinite(test_metric)
     ):
         reasons.append("missing_metric")
     if np.isfinite(train_validation_gap) and train_validation_gap > train_validation_threshold:

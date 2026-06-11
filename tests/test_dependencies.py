@@ -38,7 +38,9 @@ def test_dependency_check_handles_missing_package(monkeypatch):
     def fake_find_spec(module):
         return None if module == "torch" else object()
 
-    monkeypatch.setattr("src.markov_hmm_trader.dependencies.importlib.util.find_spec", fake_find_spec)
+    monkeypatch.setattr(
+        "src.markov_hmm_trader.dependencies.importlib.util.find_spec", fake_find_spec
+    )
 
     status = check_dependencies()
     torch_row = status[status["package"] == "torch"].iloc[0]

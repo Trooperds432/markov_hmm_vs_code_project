@@ -54,7 +54,9 @@ def test_run_single_writes_stage2a_additive_outputs(monkeypatch, tmp_path):
 
     monkeypatch.setattr("src.markov_hmm_trader.runner.load_market_data", lambda cfg: backtest)
     monkeypatch.setattr("src.markov_hmm_trader.runner.make_features", lambda raw, cfg: backtest)
-    monkeypatch.setattr("src.markov_hmm_trader.runner.walk_forward_backtest", lambda df, cfg: result)
+    monkeypatch.setattr(
+        "src.markov_hmm_trader.runner.walk_forward_backtest", lambda df, cfg: result
+    )
     monkeypatch.setattr(
         "src.markov_hmm_trader.runner.add_backtest_metric_columns", lambda df, cfg: df
     )

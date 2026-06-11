@@ -49,7 +49,9 @@ def test_garch_arch_missing_dependency_writes_structured_errors(monkeypatch):
     def fake_import_module(name):
         raise ImportError(name)
 
-    monkeypatch.setattr("src.markov_hmm_trader.volatility_forecast.import_module", fake_import_module)
+    monkeypatch.setattr(
+        "src.markov_hmm_trader.volatility_forecast.import_module", fake_import_module
+    )
     dates = pd.bdate_range("2020-01-01", periods=60)
     df = pd.DataFrame(
         {"ret_1": np.random.default_rng(3).normal(0.0, 0.01, len(dates))},

@@ -21,9 +21,12 @@ HMM outputs:
 
 Benchmark outputs:
 
+- `observable_markov_baseline.csv`
 - `observable_markov_transition_matrix.csv`
+- `observable_markov_stationary_distribution.csv`
 - `observable_markov_forecasts.csv`
 - `observable_markov_equity_curve.csv`
+- `forecast_benchmarks.csv`
 - `forecast_predictions.csv`
 - `forecast_model_comparison.csv`
 - `forecast_confirmation_diagnostics.csv`
@@ -56,3 +59,4 @@ Portfolio and paper outputs:
 - `paper_fills.csv`
 - `paper_positions.csv`
 - `paper_daily_equity.csv`
+- `paper_equity.csv`
