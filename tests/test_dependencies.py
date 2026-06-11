@@ -5,6 +5,10 @@ from src.markov_hmm_trader.dependencies import (
     dependency_status,
     dependency_status_text,
 )
+from src.markov_hmm_trader.dependency_check import (
+    check_dependencies,
+    format_dependency_report,
+)
 
 
 def test_dependency_status_lists_required_packages():
@@ -19,3 +23,26 @@ def test_dependency_status_text_contract():
 
     for dependency in DEPENDENCIES:
         assert f"{dependency}:" in text
+
+
+def test_dependency_check_wrapper_uses_stage2_contract():
+    status = check_dependencies()
+    text = format_dependency_report(status)
+
+    assert "package" in status.columns
+    for dependency in DEPENDENCIES:
+        assert f"{dependency}:" in text
+
+
+def test_dependency_check_handles_missing_package(monkeypatch):
+    def fake_find_spec(module):
+        return None if module == "torch" else object()
+
+    monkeypatch.setattr(
+        "src.markov_hmm_trader.dependencies.importlib.util.find_spec", fake_find_spec
+    )
+
+    status = check_dependencies()
+    torch_row = status[status["package"] == "torch"].iloc[0]
+
+    assert torch_row["status"] == "missing"

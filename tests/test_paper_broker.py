@@ -51,7 +51,12 @@ def test_paper_simulation_emits_csv_artifact_frames():
 
     outputs = run_paper_simulation(cfg, backtest)
 
-    assert {"paper_orders", "paper_fills", "paper_positions", "paper_daily_equity"}.issubset(
-        outputs
-    )
+    assert {
+        "paper_orders",
+        "paper_fills",
+        "paper_positions",
+        "paper_daily_equity",
+        "paper_equity",
+    }.issubset(outputs)
     assert "target_weight" in outputs["paper_orders"].columns
+    assert outputs["paper_equity"].equals(outputs["paper_daily_equity"])

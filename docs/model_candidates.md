@@ -26,3 +26,9 @@ Recommended quick grid:
 | `hmm_min_covar_candidates` | `0.001`, `0.01` |
 | `hmm_transmat_prior_candidates` | `1.0`, `5.0`, `10.0` |
 | `vol_model_candidates` | `realised_vol`, `ewma_vol`, `garch`, `arch` |
+
+`hmm_model_type_candidates` is accepted as a compatibility alias for
+`hmm_model_types`.
+
+`model_overfit_report.csv` tracks candidates across HMM, forecast, volatility, NN, and
+nested optimisation families when those modes run.

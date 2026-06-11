@@ -270,6 +270,7 @@ def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, 
         index=df.index,
     )
     return {
+        "forecast_benchmarks": comparison,
         "forecast_predictions": predictions,
         "forecast_model_comparison": comparison,
         "forecast_confirmation_diagnostics": diagnostics,

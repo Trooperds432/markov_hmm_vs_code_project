@@ -33,6 +33,18 @@ def test_observable_markov_transition_and_stationary_sum():
     assert round(float(forecast.sum()), 6) == 1.0
 
 
+def test_observable_markov_alias_labels_create_semantic_states():
+    dates = pd.bdate_range("2020-01-01", periods=20)
+    returns = pd.Series(np.r_[np.full(10, 0.01), np.full(10, -0.01)], index=dates)
+    df = pd.DataFrame({"ret_1": returns, "Close": 100 * np.exp(returns.cumsum())}, index=dates)
+    cfg = PipelineConfig(observable_markov_window=3, observable_markov_threshold=0.02)
+
+    labels = label_observable_states(df, cfg)
+
+    assert STATE_ORDER[0] in set(labels)
+    assert STATE_ORDER[1] in set(labels)
+
+
 def test_observable_markov_runner_outputs_contracts():
     dates = pd.bdate_range("2020-01-01", periods=80)
     returns = pd.Series(np.random.default_rng(1).normal(0.0, 0.01, len(dates)), index=dates)
@@ -40,6 +52,15 @@ def test_observable_markov_runner_outputs_contracts():
 
     outputs = run_observable_markov(df, PipelineConfig(observable_label_window=5))
 
+    assert "observable_markov_baseline" in outputs
     assert "observable_markov_transition_matrix" in outputs
+    assert "observable_markov_stationary_distribution" in outputs
     assert "observable_markov_forecasts" in outputs
+    assert {"date", "observable_state", "signal", "position"}.issubset(
+        outputs["observable_markov_baseline"].columns
+    )
+    assert (
+        round(float(outputs["observable_markov_stationary_distribution"]["probability"].sum()), 6)
+        == 1.0
+    )
     assert not outputs["observable_markov_equity_curve"].empty

@@ -25,6 +25,8 @@ def test_forecast_benchmarks_emit_required_columns():
     predictions = outputs["forecast_predictions"]
     comparison = outputs["forecast_model_comparison"]
 
+    assert "forecast_benchmarks" in outputs
+    assert outputs["forecast_benchmarks"].equals(comparison)
     assert {
         "date",
         "model_name",

@@ -16,3 +16,7 @@ Use:
 ```bash
 python main.py --paper --config configs/quick_test.json --no-plots
 ```
+
+Paper mode writes `paper_daily_equity.csv` and the compatibility alias
+`paper_equity.csv`; both contain the same simulated equity snapshot. It also writes
+orders, fills, positions, risk checks, and order status diagnostics.

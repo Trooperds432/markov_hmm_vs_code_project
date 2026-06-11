@@ -34,6 +34,8 @@ def test_stationary_distribution_rows_sum_to_one():
     rows = make_stationary_distribution_rows(1, _dummy_fit())
 
     assert round(sum(row["stationary_probability"] for row in rows), 6) == 1.0
+    assert round(sum(row["probability"] for row in rows), 6) == 1.0
+    assert {"state", "model_type", "n_states", "covariance_type", "seed", "n_mix"}.issubset(rows[0])
 
 
 def test_decode_comparison_rows_align_and_flag_bool():
