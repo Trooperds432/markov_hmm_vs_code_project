@@ -15,6 +15,25 @@ class PipelineConfig:
     start: str = "2012-01-01"
     end: str | None = None
     interval: str = "1d"
+    data_provider: str = "yfinance"
+    data_provider_candidates: tuple[str, ...] = ("yfinance", "openbb", "csv", "synthetic")
+    data_cache_dir: str = "cache"
+    data_failover_to_cache: bool = True
+    csv_price_path: str = ""
+    csv_benchmark_path: str = ""
+    synthetic_periods: int = 360
+    feature_groups_enabled: tuple[str, ...] = ("price_core", "volatility_core")
+    optional_feature_groups: tuple[str, ...] = (
+        "technical",
+        "alpha158_lite",
+        "breadth",
+        "macro",
+        "fundamentals",
+        "news",
+        "options",
+        "famafrench",
+        "alt_bars",
+    )
 
     # HMM
     n_states: int = 3
@@ -309,6 +328,9 @@ def load_config(path: str | Path) -> PipelineConfig:
 
     tuple_fields = {
         "random_seeds",
+        "data_provider_candidates",
+        "feature_groups_enabled",
+        "optional_feature_groups",
         "hmm_model_types",
         "hmm_model_type_candidates",
         "hmm_state_candidates",

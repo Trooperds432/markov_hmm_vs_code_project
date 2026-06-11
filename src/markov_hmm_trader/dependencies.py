@@ -10,6 +10,7 @@ DEPENDENCIES = {
     "torch": "torch",
     "statsmodels": "statsmodels",
     "yfinance": "yfinance",
+    "openbb": "openbb",
 }
 
 

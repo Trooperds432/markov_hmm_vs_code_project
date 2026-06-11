@@ -5,6 +5,7 @@ outputs/*.csv
 outputs/*.png
 outputs/*.xlsx
 outputs/*/
+cache/
 experiments/runs/*
 !experiments/runs/.gitkeep
 experiments/registry/*.csv

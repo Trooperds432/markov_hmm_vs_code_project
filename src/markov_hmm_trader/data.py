@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
 
 from .config import PipelineConfig
+from .data_providers.factory import get_data_provider
 
 
 def download_ohlcv(symbol: str, start: str, end: str | None, interval: str) -> pd.DataFrame:
+    import yfinance as yf
+
     data = yf.download(
         symbol,
         start=start,
@@ -61,12 +63,23 @@ def _coverage_row(
 
 
 def load_market_data(cfg: PipelineConfig) -> pd.DataFrame:
-    asset = download_ohlcv(cfg.ticker, cfg.start, cfg.end, cfg.interval)
-    bench = download_ohlcv(cfg.benchmark, cfg.start, cfg.end, cfg.interval)
+    provider = get_data_provider(cfg)
+    asset_result = provider.get_price_history(cfg.ticker, cfg.start, cfg.end, cfg.interval)
+    bench_result = provider.get_price_history(cfg.benchmark, cfg.start, cfg.end, cfg.interval)
+    if asset_result.data.empty:
+        raise ValueError(f"No data returned for {cfg.ticker} from provider {provider.name}.")
+    if bench_result.data.empty:
+        raise ValueError(f"No data returned for {cfg.benchmark} from provider {provider.name}.")
+    asset = asset_result.data
+    bench = bench_result.data
     coverage_rows = [
         _coverage_row(cfg.ticker, "asset", asset),
         _coverage_row(cfg.benchmark, "benchmark", bench),
     ]
+    provider_warnings = []
+    for warning_frame in (asset_result.warnings, bench_result.warnings):
+        if not warning_frame.empty:
+            provider_warnings.extend(warning_frame.to_dict("records"))
 
     df = asset.join(
         bench[["Close"]].rename(columns={"Close": "Benchmark_Close"}),
@@ -76,7 +89,10 @@ def load_market_data(cfg: PipelineConfig) -> pd.DataFrame:
     if cfg.use_extra_factor_features:
         for name, symbol in cfg.extra_symbols.items():
             try:
-                extra = download_ohlcv(symbol, cfg.start, cfg.end, cfg.interval)
+                extra_result = provider.get_price_history(symbol, cfg.start, cfg.end, cfg.interval)
+                extra = extra_result.data
+                if not extra_result.warnings.empty:
+                    provider_warnings.extend(extra_result.warnings.to_dict("records"))
                 coverage_rows.append(_coverage_row(symbol, name, extra))
             except Exception as err:
                 coverage_rows.append(_coverage_row(symbol, name, None, error=type(err).__name__))
@@ -99,6 +115,12 @@ def load_market_data(cfg: PipelineConfig) -> pd.DataFrame:
     else:
         out = df.dropna().copy()
     out.attrs["factor_data_coverage"] = coverage_rows
+    provider_metadata = pd.concat(
+        [asset_result.metadata, bench_result.metadata],
+        ignore_index=True,
+    )
+    out.attrs["data_provider_metadata"] = provider_metadata.to_dict("records")
+    out.attrs["data_provider_warnings"] = provider_warnings
     return out
 
 
@@ -109,3 +131,30 @@ def factor_data_coverage(df: pd.DataFrame) -> pd.DataFrame:
     if isinstance(coverage, list):
         return pd.DataFrame(coverage)
     return pd.DataFrame()
+
+
+def data_provider_warnings(df: pd.DataFrame) -> pd.DataFrame:
+    columns = ["provider", "symbol", "capability", "reason", "detail"]
+    warnings = df.attrs.get("data_provider_warnings")
+    if isinstance(warnings, pd.DataFrame):
+        frame = warnings.copy()
+        for column in columns:
+            if column not in frame:
+                frame[column] = pd.Series(dtype=object)
+        return frame[columns]
+    if isinstance(warnings, list):
+        frame = pd.DataFrame(warnings)
+        for column in columns:
+            if column not in frame:
+                frame[column] = pd.Series(dtype=object)
+        return frame[columns]
+    return pd.DataFrame(columns=columns)
+
+
+def data_provider_metadata(df: pd.DataFrame) -> pd.DataFrame:
+    metadata = df.attrs.get("data_provider_metadata")
+    if isinstance(metadata, pd.DataFrame):
+        return metadata.copy()
+    if isinstance(metadata, list):
+        return pd.DataFrame(metadata)
+    return pd.DataFrame(columns=["provider", "symbol", "capability", "status", "detail"])
