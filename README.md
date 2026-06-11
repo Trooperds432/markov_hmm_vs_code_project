@@ -42,6 +42,16 @@ The health check is non-fatal and reports each optional group as `available` or
 `missing`; missing optional packages create structured CSV warning rows when their
 research layers are enabled.
 
+Run the fuller Stage 2D environment doctor:
+
+```bash
+python main.py --doctor
+```
+
+This writes `outputs/diagnostics/dependency_report.json` and
+`outputs/diagnostics/dependency_report.txt`. Missing optional packages warn; missing
+required packages fail.
+
 ## Quick Start
 
 Default single-symbol run:
@@ -79,6 +89,8 @@ Research modes:
 - `--portfolio`: portfolio construction mode
 - `--compare-models`: compare HMM, GMM, trend, buy-hold, and cash baselines
 - `--paper`: simulation-only paper trading scaffold
+- `--mode ci_smoke`: deterministic synthetic-data smoke run with output-contract checks
+- `--mode diagnostics`: doctor plus diagnostics output-contract checks
 
 ## Outputs
 
@@ -123,6 +135,7 @@ Other modes:
 - Model comparison: `model_comparison.csv`, `model_comparison_equity_curves.csv`, `model_state_comparison.csv`, optional `model_comparison_equity.png`
 - Paper simulation: `paper_orders.csv`, `paper_positions.csv`, `paper_daily_equity.csv`, `paper_equity.csv`, `paper_risk_checks.csv`
 - Experiments: `experiments/runs/...` config snapshots, environment info, copied CSVs, and `experiments/registry/model_registry.csv`
+- Stage 2D diagnostics: `outputs/diagnostics/dependency_report.json`, `dependency_report.txt`, `split_registry.csv`, `model_selection_candidates.csv`, `baseline_comparison.csv`, and `experiment_metadata.json`
 
 ## Common Errors
 
