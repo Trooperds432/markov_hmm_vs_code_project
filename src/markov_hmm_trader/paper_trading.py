@@ -70,6 +70,18 @@ def run_paper_simulation(
 
     equity = broker.equity({cfg.ticker: float(latest["Close"])})
     positions = broker.get_positions()
+    daily_equity = pd.DataFrame(
+        [
+            {
+                "date": pd.Timestamp(latest.name).date().isoformat(),
+                "equity": equity,
+                "cash": broker.get_cash(),
+                "gross_exposure": abs(target_weight),
+                "net_exposure": target_weight,
+                "drawdown": 0.0,
+            }
+        ]
+    )
     return {
         "paper_orders": pd.DataFrame(orders),
         "paper_fills": pd.DataFrame(fills),
@@ -88,18 +100,8 @@ def run_paper_simulation(
                 }
             ]
         ),
-        "paper_daily_equity": pd.DataFrame(
-            [
-                {
-                    "date": pd.Timestamp(latest.name).date().isoformat(),
-                    "equity": equity,
-                    "cash": broker.get_cash(),
-                    "gross_exposure": abs(target_weight),
-                    "net_exposure": target_weight,
-                    "drawdown": 0.0,
-                }
-            ]
-        ),
+        "paper_daily_equity": daily_equity,
+        "paper_equity": daily_equity,
         "paper_risk_checks": checks,
         "paper_order_status": orders_frame(
             [broker.get_order_status(order_id) for order_id in broker.orders]

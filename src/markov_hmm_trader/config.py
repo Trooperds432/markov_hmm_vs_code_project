@@ -154,6 +154,9 @@ class PipelineConfig:
     observable_bull_threshold: float = 0.02
     observable_bear_threshold: float = -0.02
     observable_forecast_steps: tuple[int, ...] = (1, 5, 20, 60)
+    observable_markov_window: int | None = None
+    observable_markov_threshold: float | None = None
+    observable_markov_forecast_horizons: tuple[int, ...] | None = None
 
     # Forecast benchmarks and volatility forecasts
     enable_forecast_benchmarks: bool = False
@@ -170,6 +173,7 @@ class PipelineConfig:
     ewma_lambda: float = 0.94
     vol_forecast_horizon_bars: int = 20
     vol_forecast_refit_frequency: int = 21
+    vol_rank_window: int | None = None
     garch_p: int = 1
     garch_q: int = 1
     arch_p: int = 1
@@ -181,6 +185,8 @@ class PipelineConfig:
     enable_overfit_report: bool = True
     overfit_train_validation_gap_threshold: float = 0.25
     overfit_validation_test_gap_threshold: float = 0.25
+    overfit_train_validation_gap_warn: float | None = None
+    overfit_validation_test_gap_warn: float | None = None
 
     # Nested walk-forward optimisation
     enable_nested_optimisation: bool = False
@@ -267,6 +273,31 @@ def load_config(path: str | Path) -> PipelineConfig:
     if isinstance(raw.get("portfolio_mode"), bool):
         raw["portfolio_enabled"] = bool(raw["portfolio_mode"])
         raw["portfolio_mode"] = "top_k" if raw["portfolio_enabled"] else "single_asset"
+    if "observable_markov_window" in raw and "observable_label_window" not in raw:
+        raw["observable_label_window"] = raw["observable_markov_window"]
+    if "observable_markov_threshold" in raw:
+        if "observable_bull_threshold" not in raw:
+            raw["observable_bull_threshold"] = raw["observable_markov_threshold"]
+        if "observable_bear_threshold" not in raw:
+            raw["observable_bear_threshold"] = -float(raw["observable_markov_threshold"])
+    if "observable_markov_forecast_horizons" in raw and "observable_forecast_steps" not in raw:
+        raw["observable_forecast_steps"] = raw["observable_markov_forecast_horizons"]
+    if "vol_rank_window" in raw and "vol_risk_lookback" not in raw:
+        raw["vol_risk_lookback"] = raw["vol_rank_window"]
+    if (
+        "overfit_train_validation_gap_warn" in raw
+        and "overfit_train_validation_gap_threshold" not in raw
+    ):
+        raw["overfit_train_validation_gap_threshold"] = raw[
+            "overfit_train_validation_gap_warn"
+        ]
+    if (
+        "overfit_validation_test_gap_warn" in raw
+        and "overfit_validation_test_gap_threshold" not in raw
+    ):
+        raw["overfit_validation_test_gap_threshold"] = raw[
+            "overfit_validation_test_gap_warn"
+        ]
 
     valid_names = {field.name for field in fields(PipelineConfig)}
     clean = {k: v for k, v in raw.items() if k in valid_names}
@@ -286,6 +317,7 @@ def load_config(path: str | Path) -> PipelineConfig:
         "stress_missing_data_probabilities",
         "universe",
         "observable_forecast_steps",
+        "observable_markov_forecast_horizons",
         "forecast_models",
         "forecast_levels",
         "vol_model_candidates",

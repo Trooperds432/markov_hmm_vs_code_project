@@ -18,6 +18,16 @@ OVERFIT_COLUMNS = [
 ]
 
 
+def _gap_thresholds(cfg: PipelineConfig) -> tuple[float, float]:
+    train_validation = cfg.overfit_train_validation_gap_threshold
+    validation_test = cfg.overfit_validation_test_gap_threshold
+    if cfg.overfit_train_validation_gap_warn is not None:
+        train_validation = float(cfg.overfit_train_validation_gap_warn)
+    if cfg.overfit_validation_test_gap_warn is not None:
+        validation_test = float(cfg.overfit_validation_test_gap_warn)
+    return float(train_validation), float(validation_test)
+
+
 def overfit_row(
     model_family: str,
     candidate_id: object,
@@ -26,6 +36,7 @@ def overfit_row(
     test_metric: float,
     cfg: PipelineConfig,
 ) -> dict[str, object]:
+    train_validation_threshold, validation_test_threshold = _gap_thresholds(cfg)
     train_validation_gap = (
         float(train_metric - validation_metric)
         if np.isfinite(train_metric) and np.isfinite(validation_metric)
@@ -37,14 +48,16 @@ def overfit_row(
         else np.nan
     )
     reasons = []
-    if np.isfinite(train_validation_gap) and (
-        train_validation_gap > cfg.overfit_train_validation_gap_threshold
+    if not (
+        np.isfinite(train_metric)
+        and np.isfinite(validation_metric)
+        and np.isfinite(test_metric)
     ):
-        reasons.append("train_validation_gap")
-    if np.isfinite(validation_test_gap) and (
-        validation_test_gap > cfg.overfit_validation_test_gap_threshold
-    ):
-        reasons.append("validation_test_gap")
+        reasons.append("missing_metric")
+    if np.isfinite(train_validation_gap) and train_validation_gap > train_validation_threshold:
+        reasons.append("train_validation_gap_exceeds_threshold")
+    if np.isfinite(validation_test_gap) and validation_test_gap > validation_test_threshold:
+        reasons.append("validation_test_gap_exceeds_threshold")
     return {
         "model_family": model_family,
         "candidate_id": candidate_id,

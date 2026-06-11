@@ -8,7 +8,7 @@ from src.markov_hmm_trader.config import (
     apply_quick_mode,
     load_config,
 )
-from src.markov_hmm_trader.dependencies import dependency_status_text
+from src.markov_hmm_trader.dependency_check import dependency_status_text
 
 CONFIG_PATH = Path("configs/default.json")
 OUTPUT_DIR = Path("outputs")

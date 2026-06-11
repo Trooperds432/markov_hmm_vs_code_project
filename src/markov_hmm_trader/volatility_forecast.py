@@ -24,8 +24,13 @@ def _horizon_variance_from_annual_sigma(sigma: pd.Series, cfg: PipelineConfig) -
 
 
 def _risk_multiplier(sigma: pd.Series, cfg: PipelineConfig) -> tuple[pd.Series, pd.Series]:
-    rank = sigma.rolling(cfg.vol_risk_lookback, min_periods=20).rank(pct=True)
-    multiplier = (1.0 - rank).clip(cfg.vol_min_risk_multiplier, cfg.vol_max_risk_multiplier)
+    lookback = int(cfg.vol_rank_window or cfg.vol_risk_lookback)
+    lower = max(float(cfg.min_vol_mult), float(cfg.vol_min_risk_multiplier))
+    upper = min(float(cfg.max_vol_mult), float(cfg.vol_max_risk_multiplier))
+    if lower > upper:
+        upper = lower
+    rank = sigma.rolling(lookback, min_periods=20).rank(pct=True)
+    multiplier = (1.0 - rank).clip(lower, upper)
     return rank.fillna(0.5), multiplier.fillna(1.0)
 
 
@@ -121,8 +126,8 @@ def run_volatility_forecasts(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFr
             variance = _horizon_variance_from_annual_sigma(sigma, cfg)
             error = f"unsupported_vol_model:{model_name}"
 
-        sigma = sigma.replace([np.inf, -np.inf], np.nan).bfill().fillna(0.0)
-        variance = variance.replace([np.inf, -np.inf], np.nan).bfill().fillna(0.0)
+        sigma = sigma.replace([np.inf, -np.inf], np.nan).clip(lower=0.0).fillna(0.0)
+        variance = variance.replace([np.inf, -np.inf], np.nan).clip(lower=0.0).fillna(0.0)
         vol_rank, risk_multiplier = _risk_multiplier(sigma, cfg)
         for date in df.index:
             rows.append(

@@ -21,8 +21,8 @@ from .nn_model import (
     nn_predictions_frame,
     nn_training_metrics_frame,
 )
+from .model_overfit_report import build_model_overfit_report
 from .observable_markov import run_observable_markov
-from .overfit import hmm_overfit_report
 from .plots import save_plots
 from .stress import (
     make_asset_bootstrap_stress,
@@ -113,10 +113,13 @@ def run_single(
         ensemble_frame = ensemble_diagnostics(backtest)
         ensemble_frame.to_csv(output_dir / "ensemble_diagnostics.csv", index=False)
         ensemble_frame.to_csv(output_dir / "ensemble_predictions.csv", index=False)
-        hmm_overfit_report(result.hmm_model_selection, result.window_diagnostics, run_cfg).to_csv(
-            output_dir / "model_overfit_report.csv",
-            index=False,
-        )
+        if run_cfg.enable_overfit_report:
+            build_model_overfit_report(
+                result.hmm_model_selection, result.window_diagnostics, run_cfg
+            ).to_csv(
+                output_dir / "model_overfit_report.csv",
+                index=False,
+            )
 
         if run_cfg.enable_observable_markov:
             for name, frame in run_observable_markov(backtest, run_cfg).items():
