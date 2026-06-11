@@ -46,3 +46,8 @@ def test_walk_forward_smoke_on_synthetic_data():
     assert not result.backtest.empty
     assert {STATE_BULL, STATE_BEAR, STATE_SIDE}.issubset(result.backtest.columns)
     assert "position" in result.backtest.columns
+    assert {
+        "decoded_state_viterbi",
+        "decoded_state_map",
+        "state_decode_disagreement",
+    }.issubset(result.backtest.columns)

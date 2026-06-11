@@ -27,6 +27,7 @@ class PipelineConfig:
     enable_hmm_model_selection: bool = False
     hmm_model_type: str = "gaussian"
     hmm_model_types: tuple[str, ...] = ("gaussian",)
+    hmm_model_type_candidates: tuple[str, ...] | None = None
     hmm_state_candidates: tuple[int, ...] = (3, 4, 5)
     hmm_covariance_candidates: tuple[str, ...] = ("diag", "full")
     hmm_n_mix: int = 2
@@ -273,6 +274,8 @@ def load_config(path: str | Path) -> PipelineConfig:
     if isinstance(raw.get("portfolio_mode"), bool):
         raw["portfolio_enabled"] = bool(raw["portfolio_mode"])
         raw["portfolio_mode"] = "top_k" if raw["portfolio_enabled"] else "single_asset"
+    if "hmm_model_type_candidates" in raw and "hmm_model_types" not in raw:
+        raw["hmm_model_types"] = raw["hmm_model_type_candidates"]
     if "observable_markov_window" in raw and "observable_label_window" not in raw:
         raw["observable_label_window"] = raw["observable_markov_window"]
     if "observable_markov_threshold" in raw:
@@ -301,6 +304,7 @@ def load_config(path: str | Path) -> PipelineConfig:
     tuple_fields = {
         "random_seeds",
         "hmm_model_types",
+        "hmm_model_type_candidates",
         "hmm_state_candidates",
         "hmm_covariance_candidates",
         "hmm_n_mix_candidates",

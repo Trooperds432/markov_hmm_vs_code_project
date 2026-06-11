@@ -134,6 +134,9 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         df[col] = np.nan
 
     df["hidden_state"] = pd.Series(index=df.index, dtype="object")
+    df["decoded_state_viterbi"] = pd.Series(index=df.index, dtype="object")
+    df["decoded_state_map"] = pd.Series(index=df.index, dtype="object")
+    df["state_decode_disagreement"] = False
     df["hmm_window_id"] = np.nan
     df["target_position"] = 0.0
 
@@ -171,10 +174,16 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         _, decoded_raw = model.decode(X_test, algorithm="viterbi")
         _, decoded_map_raw = model.decode(X_test, algorithm="map")
         decoded = [fit.state_map[int(x)] for x in decoded_raw]
+        decoded_map = [fit.state_map[int(x)] for x in decoded_map_raw]
 
         idx = test.index
         df.loc[idx, STATE_ORDER] = next_probs[STATE_ORDER].values
         df.loc[idx, "hidden_state"] = decoded
+        df.loc[idx, "decoded_state_viterbi"] = decoded
+        df.loc[idx, "decoded_state_map"] = decoded_map
+        df.loc[idx, "state_decode_disagreement"] = np.asarray(decoded) != np.asarray(
+            decoded_map
+        )
         df.loc[idx, "hmm_window_id"] = window_id
 
         if cfg.enable_diagnostics:

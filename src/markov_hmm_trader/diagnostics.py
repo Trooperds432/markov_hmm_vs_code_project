@@ -250,10 +250,17 @@ def make_stationary_distribution_rows(window_id: int, fit: HMMFitResult) -> list
         {
             "window_id": window_id,
             "component": component,
+            "state": component,
             "semantic_state": fit.state_map.get(component, ""),
             "stationary_probability": _safe_float(probability),
+            "probability": _safe_float(probability),
             "occupancy": _safe_float(fit.component_occupancy.get(component, np.nan)),
             "expected_dwell": _safe_float(dwell.get(component, np.nan)),
+            "model_type": fit.selected_model_type,
+            "n_states": int(fit.selected_n_states),
+            "covariance_type": fit.selected_covariance_type,
+            "seed": int(fit.best_seed),
+            "n_mix": int(fit.selected_n_mix),
         }
         for component, probability in stationary.items()
     ]

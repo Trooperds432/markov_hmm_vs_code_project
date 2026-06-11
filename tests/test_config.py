@@ -41,6 +41,7 @@ def test_stage2_alias_config_fields_are_mapped(tmp_path):
           "observable_markov_window": 11,
           "observable_markov_threshold": 0.03,
           "observable_markov_forecast_horizons": [1, 3],
+          "hmm_model_type_candidates": ["gaussian", "gmm"],
           "vol_rank_window": 55,
           "overfit_train_validation_gap_warn": 0.4,
           "overfit_validation_test_gap_warn": 0.2
@@ -55,6 +56,7 @@ def test_stage2_alias_config_fields_are_mapped(tmp_path):
     assert cfg.observable_bull_threshold == 0.03
     assert cfg.observable_bear_threshold == -0.03
     assert cfg.observable_forecast_steps == (1, 3)
+    assert cfg.hmm_model_types == ("gaussian", "gmm")
     assert cfg.vol_risk_lookback == 55
     assert cfg.overfit_train_validation_gap_threshold == 0.4
     assert cfg.overfit_validation_test_gap_threshold == 0.2
