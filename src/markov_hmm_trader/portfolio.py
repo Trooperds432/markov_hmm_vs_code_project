@@ -18,16 +18,18 @@ def allocate_weights(
     volatility: pd.Series,
     cfg: PipelineConfig,
 ) -> pd.Series:
-    selected = scores.sort_values(ascending=False).head(int(cfg.portfolio_max_positions))
+    mode = str(cfg.portfolio_mode).lower()
+    max_positions = 1 if mode == "single_asset" else int(cfg.portfolio_max_positions)
+    selected = scores.sort_values(ascending=False).head(max_positions)
     if selected.empty:
         return pd.Series(dtype=float)
 
-    method = cfg.portfolio_weighting_method
+    method = "risk_budgeted" if mode == "risk_budgeted" else cfg.portfolio_weighting_method
     if method == "equal":
         raw = pd.Series(1.0, index=selected.index)
     elif method in {"signal_weighted", "score"}:
         raw = selected.clip(lower=0.0)
-    elif method in {"risk_parity_simple", "vol_inverse", "inverse_vol"}:
+    elif method in {"risk_budgeted", "risk_parity_simple", "vol_inverse", "inverse_vol"}:
         raw = 1.0 / volatility.reindex(selected.index).replace(0.0, np.nan)
     elif method == "score_vol_inverse":
         vol_inverse = 1.0 / volatility.reindex(selected.index).replace(0.0, np.nan)
@@ -40,6 +42,14 @@ def allocate_weights(
         raw = pd.Series(1.0, index=selected.index)
 
     weights = raw / raw.sum()
+    if method == "risk_budgeted":
+        annual_vol = volatility.reindex(selected.index).replace([np.inf, -np.inf], np.nan)
+        annual_vol = annual_vol.fillna(annual_vol.median()).fillna(0.0) * np.sqrt(cfg.bars_per_year)
+        portfolio_vol = float(np.sqrt(np.square(weights * annual_vol).sum()))
+        if portfolio_vol > 0.0:
+            vol_scale = min(1.0, float(cfg.portfolio_target_vol) / portfolio_vol)
+            weights = weights * vol_scale
+
     weights = weights.clip(upper=float(cfg.portfolio_max_weight_per_asset))
     max_invested = max(0.0, 1.0 - float(cfg.portfolio_cash_buffer))
     if weights.sum() > max_invested:

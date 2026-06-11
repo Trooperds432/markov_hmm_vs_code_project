@@ -225,6 +225,8 @@ class PipelineConfig:
     ensemble_mode: str = "hmm_only"
     hmm_weight: float = 0.65
     nn_weight: float = 0.35
+    observable_markov_weight: float = 0.10
+    forecast_weight: float = 0.10
 
     # Portfolio construction
     portfolio_enabled: bool = False

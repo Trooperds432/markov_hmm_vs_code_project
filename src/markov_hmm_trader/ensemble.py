@@ -7,6 +7,14 @@ from .config import PipelineConfig
 from .states import STATE_BEAR, STATE_BULL, STATE_SIDE
 
 
+def _finite_float(value: object, default: float = 0.0) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return default
+    return numeric if np.isfinite(numeric) else default
+
+
 def ensemble_signal_for_row(row: pd.Series, cfg: PipelineConfig) -> float:
     hmm_signal = float(row.get(STATE_BULL, 0.0) - row.get(STATE_BEAR, 0.0))
     nn_probability = row.get(
@@ -30,6 +38,21 @@ def ensemble_signal_for_row(row: pd.Series, cfg: PipelineConfig) -> float:
         return 0.0
     if cfg.ensemble_mode == "weighted_blend":
         return float(np.clip(cfg.hmm_weight * hmm_signal + cfg.nn_weight * nn_signal, -1.0, 1.0))
+    if cfg.ensemble_mode == "multi_signal":
+        observable_signal = _finite_float(row.get("observable_markov_signal", 0.0))
+        forecast_signal = _finite_float(row.get("forecast_signal", 0.0))
+        risk_multiplier = _finite_float(
+            row.get("vol_risk_multiplier", row.get("risk_multiplier", 1.0)),
+            default=1.0,
+        )
+        risk_multiplier = float(np.clip(risk_multiplier, 0.0, max(cfg.max_vol_mult, 1.0)))
+        raw_signal = (
+            cfg.hmm_weight * hmm_signal
+            + cfg.nn_weight * nn_signal
+            + cfg.observable_markov_weight * observable_signal
+            + cfg.forecast_weight * forecast_signal
+        )
+        return float(np.clip(raw_signal * risk_multiplier, -1.0, 1.0))
     return hmm_signal
 
 

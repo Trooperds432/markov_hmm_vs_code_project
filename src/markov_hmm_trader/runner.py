@@ -15,7 +15,13 @@ from .experiment import finalize_experiment_run, start_experiment_run
 from .features import feature_summary, make_features
 from .forecast_benchmarks import run_forecast_benchmarks
 from .metrics import add_backtest_metric_columns, make_report
-from .model_overfit_report import build_model_overfit_report
+from .model_overfit_report import (
+    build_model_overfit_report,
+    forecast_overfit_report,
+    nested_overfit_report,
+    nn_overfit_report,
+    volatility_overfit_report,
+)
 from .nn_model import (
     nn_forecasts_frame,
     nn_oos_split_info_frame,
@@ -69,6 +75,7 @@ def run_single(
 
     if diagnostics_enabled:
         print("Saving diagnostics...")
+        additional_overfit_reports = []
         factor_data_coverage(raw).to_csv(output_dir / "factor_data_coverage.csv", index=False)
         feature_summary(features, run_cfg).to_csv(output_dir / "feature_summary.csv", index=False)
         result.window_diagnostics.to_csv(output_dir / "window_diagnostics.csv", index=False)
@@ -107,31 +114,42 @@ def run_single(
         nn_forecasts["ticker"] = run_cfg.ticker
         nn_forecasts.to_csv(output_dir / "nn_forecasts.csv", index=False)
         nn_oos_split_info_frame(run_cfg).to_csv(output_dir / "nn_oos_split_info.csv", index=False)
-        nn_training_metrics_frame(run_cfg).to_csv(
-            output_dir / "nn_training_metrics.csv", index=False
-        )
+        nn_training_metrics = nn_training_metrics_frame(run_cfg)
+        nn_training_metrics.to_csv(output_dir / "nn_training_metrics.csv", index=False)
+        additional_overfit_reports.append(nn_overfit_report(nn_training_metrics, run_cfg))
         ensemble_frame = ensemble_diagnostics(backtest)
         ensemble_frame.to_csv(output_dir / "ensemble_diagnostics.csv", index=False)
         ensemble_frame.to_csv(output_dir / "ensemble_predictions.csv", index=False)
-        if run_cfg.enable_overfit_report:
-            build_model_overfit_report(
-                result.hmm_model_selection, result.window_diagnostics, run_cfg
-            ).to_csv(
-                output_dir / "model_overfit_report.csv",
-                index=False,
-            )
 
         if run_cfg.enable_observable_markov:
             for name, frame in run_observable_markov(backtest, run_cfg).items():
                 frame.to_csv(output_dir / f"{name}.csv", index=False)
 
         if run_cfg.enable_forecast_benchmarks:
-            for name, frame in run_forecast_benchmarks(backtest, run_cfg).items():
+            forecast_outputs = run_forecast_benchmarks(backtest, run_cfg)
+            for name, frame in forecast_outputs.items():
                 frame.to_csv(output_dir / f"{name}.csv", index=False)
+            additional_overfit_reports.append(
+                forecast_overfit_report(
+                    forecast_outputs.get("forecast_model_comparison", pd.DataFrame()), run_cfg
+                )
+            )
 
         if run_cfg.enable_volatility_forecasts:
-            run_volatility_forecasts(backtest, run_cfg).to_csv(
-                output_dir / "volatility_forecasts.csv",
+            volatility_forecasts = run_volatility_forecasts(backtest, run_cfg)
+            volatility_forecasts.to_csv(output_dir / "volatility_forecasts.csv", index=False)
+            additional_overfit_reports.append(
+                volatility_overfit_report(volatility_forecasts, run_cfg)
+            )
+
+        if run_cfg.enable_overfit_report:
+            build_model_overfit_report(
+                result.hmm_model_selection,
+                result.window_diagnostics,
+                run_cfg,
+                *additional_overfit_reports,
+            ).to_csv(
+                output_dir / "model_overfit_report.csv",
                 index=False,
             )
 
@@ -211,6 +229,10 @@ def run_nested_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool = Fa
 
     print("Running nested walk-forward optimisation...")
     outputs = run_nested_optimisation(replace(cfg, enable_nested_optimisation=True), output_dir)
+    if cfg.enable_overfit_report:
+        nested_overfit_report(outputs.get("nested_candidate_results", pd.DataFrame()), cfg).to_csv(
+            output_dir / "model_overfit_report.csv", index=False
+        )
     print(outputs["nested_window_results"].to_string(index=False))
 
 
@@ -218,9 +240,8 @@ def run_portfolio_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool =
     from .portfolio import run_portfolio
 
     print("Running portfolio construction mode...")
-    outputs = run_portfolio(
-        replace(cfg, portfolio_enabled=True, portfolio_mode="top_k"), output_dir
-    )
+    mode = "risk_budgeted" if cfg.portfolio_mode == "risk_budgeted" else "top_k"
+    outputs = run_portfolio(replace(cfg, portfolio_enabled=True, portfolio_mode=mode), output_dir)
     stats = outputs["portfolio_stats"]
     if isinstance(stats, pd.Series):
         print(stats.to_string())
