@@ -97,16 +97,16 @@ Diagnostics:
 - `hmm_emissions.csv`: component emissions, covariance summaries, occupancy, dwell time
 - `hmm_transition_matrices.csv`: selected transition matrices and semantic maps
 - `hmm_state_stability.csv`: semantic map changes and transition/emission distances
-- `hmm_stationary_distribution.csv`: component stationary probabilities and dwell times
-- `hmm_decode_comparison.csv`: Viterbi vs MAP decoded state comparison
+- `hmm_stationary_distribution.csv`: component stationary probabilities, dwell times, and compatibility aliases such as `state`, `probability`, `model_type`, and `n_mix`
+- `hmm_decode_comparison.csv`: Viterbi vs MAP decoded state comparison; `equity_curve.csv` also includes `decoded_state_viterbi`, `decoded_state_map`, and `state_decode_disagreement`
 - `hmm_component_diagnostics.csv`: component-level return, volatility, dwell, and semantic scores
 - `hmm_synthetic_sample_stress.csv`: fitted-HMM sample-path stress rows
 - `factor_data_coverage.csv`: downloaded factor symbol coverage
 - `feature_summary.csv`: feature distribution and missingness summary
 - `observable_markov_baseline.csv`, `observable_markov_stationary_distribution.csv`: transparent Markov baseline labels and stationary probabilities
-- `nn_predictions.csv`, `nn_forecasts.csv`, `nn_oos_split_info.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics
+- `nn_predictions.csv`, `nn_forecasts.csv`, `nn_oos_split_info.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics, including `multi_signal` mode when configured
 - `volatility_forecasts.csv`: realised, EWMA, GARCH, and ARCH volatility forecasts
-- `model_overfit_report.csv`: train/validation/test metric gap warnings with explicit reasons such as `missing_metric`, `train_validation_gap_exceeds_threshold`, and `validation_test_gap_exceeds_threshold`
+- `model_overfit_report.csv`: train/validation/test metric gap warnings for HMM, forecast, volatility, NN, and nested candidates, with explicit reasons such as `missing_metric`, `train_validation_gap_exceeds_threshold`, and `validation_test_gap_exceeds_threshold`
 
 Stress outputs:
 
@@ -119,7 +119,7 @@ Stress outputs:
 Other modes:
 
 - Nested: `nested_window_results.csv`, `nested_candidate_results.csv`, `nested_oos_equity_curve.csv`
-- Portfolio: `portfolio_equity_curve.csv`, `portfolio_weights.csv`, `portfolio_trades.csv`, `portfolio_stats.csv`, `portfolio_asset_signals.csv`
+- Portfolio: `portfolio_equity_curve.csv`, `portfolio_weights.csv`, `portfolio_trades.csv`, `portfolio_stats.csv`, `portfolio_asset_signals.csv`; modes include `single_asset`, `top_k`, and `risk_budgeted`
 - Model comparison: `model_comparison.csv`, `model_comparison_equity_curves.csv`, `model_state_comparison.csv`, optional `model_comparison_equity.png`
 - Paper simulation: `paper_orders.csv`, `paper_positions.csv`, `paper_daily_equity.csv`, `paper_equity.csv`, `paper_risk_checks.csv`
 - Experiments: `experiments/runs/...` config snapshots, environment info, copied CSVs, and `experiments/registry/model_registry.csv`

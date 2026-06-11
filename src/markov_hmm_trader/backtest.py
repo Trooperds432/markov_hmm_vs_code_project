@@ -181,9 +181,7 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         df.loc[idx, "hidden_state"] = decoded
         df.loc[idx, "decoded_state_viterbi"] = decoded
         df.loc[idx, "decoded_state_map"] = decoded_map
-        df.loc[idx, "state_decode_disagreement"] = np.asarray(decoded) != np.asarray(
-            decoded_map
-        )
+        df.loc[idx, "state_decode_disagreement"] = np.asarray(decoded) != np.asarray(decoded_map)
         df.loc[idx, "hmm_window_id"] = window_id
 
         if cfg.enable_diagnostics:
