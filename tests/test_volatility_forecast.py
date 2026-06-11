@@ -39,8 +39,31 @@ def test_volatility_forecast_contract_and_multiplier_bounds():
     assert {"date", "vol_model", "forecast_sigma", "vol_risk_multiplier", "error"}.issubset(
         output.columns
     )
-    assert output["vol_risk_multiplier"].between(0.0, 1.0).all()
+    assert output["forecast_sigma"].ge(0.0).all()
+    assert output["forecast_variance"].ge(0.0).all()
+    assert output["vol_risk_multiplier"].between(cfg.min_vol_mult, cfg.max_vol_mult).all()
     assert set(output["vol_model"]) == {"realised_vol", "ewma_vol", "garch", "arch"}
+
+
+def test_garch_arch_missing_dependency_writes_structured_errors(monkeypatch):
+    def fake_import_module(name):
+        raise ImportError(name)
+
+    monkeypatch.setattr("src.markov_hmm_trader.volatility_forecast.import_module", fake_import_module)
+    dates = pd.bdate_range("2020-01-01", periods=60)
+    df = pd.DataFrame(
+        {"ret_1": np.random.default_rng(3).normal(0.0, 0.01, len(dates))},
+        index=dates,
+    )
+
+    output = run_volatility_forecasts(
+        df,
+        PipelineConfig(vol_model_candidates=("garch", "arch")),
+    )
+
+    assert set(output["vol_model"]) == {"garch", "arch"}
+    assert output["error"].str.startswith("statsforecast_missing").all()
+    assert output["forecast_sigma"].ge(0.0).all()
 
 
 def test_garch_arch_use_statsforecast_models_when_available(monkeypatch):
