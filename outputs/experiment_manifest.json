@@ -1,11 +1,38 @@
 {
-  "run_id": "20260611_114031_default_hmm_research",
+  "run_id": "20260611_214836_default_hmm_research",
   "config": {
     "ticker": "NVDA",
     "benchmark": "QQQ",
     "start": "2012-01-01",
     "end": null,
     "interval": "1d",
+    "data_provider": "yfinance",
+    "data_provider_candidates": [
+      "yfinance",
+      "openbb",
+      "csv",
+      "synthetic"
+    ],
+    "data_cache_dir": "cache",
+    "data_failover_to_cache": true,
+    "csv_price_path": "",
+    "csv_benchmark_path": "",
+    "synthetic_periods": 360,
+    "feature_groups_enabled": [
+      "price_core",
+      "volatility_core"
+    ],
+    "optional_feature_groups": [
+      "technical",
+      "alpha158_lite",
+      "breadth",
+      "macro",
+      "fundamentals",
+      "news",
+      "options",
+      "famafrench",
+      "alt_bars"
+    ],
     "n_states": 3,
     "train_window": 756,
     "retrain_frequency": 63,
@@ -21,6 +48,7 @@
     "hmm_model_types": [
       "gaussian"
     ],
+    "hmm_model_type_candidates": null,
     "hmm_state_candidates": [
       3
     ],
@@ -87,6 +115,10 @@
     "rs_fast": 20,
     "rs_slow": 60,
     "bars_per_year": 252,
+    "random_seed": 42,
+    "deterministic": true,
+    "purge_bars": 0,
+    "embargo_bars": 0,
     "enable_diagnostics": true,
     "enable_stress_tests": true,
     "enable_benchmark": false,
@@ -159,6 +191,9 @@
       20,
       60
     ],
+    "observable_markov_window": null,
+    "observable_markov_threshold": null,
+    "observable_markov_forecast_horizons": null,
     "enable_forecast_benchmarks": false,
     "forecast_models": [
       "naive",
@@ -186,6 +221,7 @@
     "ewma_lambda": 0.94,
     "vol_forecast_horizon_bars": 20,
     "vol_forecast_refit_frequency": 21,
+    "vol_rank_window": null,
     "garch_p": 1,
     "garch_q": 1,
     "arch_p": 1,
@@ -195,6 +231,8 @@
     "enable_overfit_report": true,
     "overfit_train_validation_gap_threshold": 0.25,
     "overfit_validation_test_gap_threshold": 0.25,
+    "overfit_train_validation_gap_warn": null,
+    "overfit_validation_test_gap_warn": null,
     "enable_nested_optimisation": false,
     "outer_train_years": 5,
     "outer_validation_years": 1,
@@ -234,6 +272,8 @@
     "ensemble_mode": "hmm_only",
     "hmm_weight": 0.65,
     "nn_weight": 0.35,
+    "observable_markov_weight": 0.1,
+    "forecast_weight": 0.1,
     "portfolio_enabled": false,
     "portfolio_mode": "single_asset",
     "portfolio_symbols": [
@@ -283,11 +323,16 @@
     "asset_bootstrap_stress.csv",
     "cost_slippage_stress.csv",
     "crisis_window_stress.csv",
+    "data_provider_metadata.csv",
+    "data_provider_warnings.csv",
     "ensemble_diagnostics.csv",
     "ensemble_predictions.csv",
     "equity_curve.csv",
     "equity_plot.png",
+    "experiment_manifest.json",
     "factor_data_coverage.csv",
+    "feature_group_metadata.csv",
+    "feature_group_warnings.csv",
     "feature_summary.csv",
     "forecast_confirmation_diagnostics.csv",
     "forecast_model_comparison.csv",
@@ -339,5 +384,5 @@
     "volatility_forecasts.csv",
     "window_diagnostics.csv"
   ],
-  "git_commit": "8943bf0c780550c98c35cf54bcba1a7addd06da5"
+  "git_commit": "890ed7a07145846520ed86a4d72d056014d5f726"
 }
