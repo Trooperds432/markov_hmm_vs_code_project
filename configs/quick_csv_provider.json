@@ -1,0 +1,22 @@
+{
+  "ticker": "LOCAL_ASSET",
+  "benchmark": "LOCAL_BENCH",
+  "data_provider": "csv",
+  "csv_price_path": "data/sample_asset_ohlcv.csv",
+  "csv_benchmark_path": "data/sample_benchmark_ohlcv.csv",
+  "start": "2020-01-01",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 10,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_hmm_model_selection": false,
+  "feature_groups_enabled": ["price_core", "volatility_core", "technical"],
+  "enable_volatility_forecasts": true,
+  "vol_model_candidates": ["realised_vol", "ewma_vol"],
+  "enable_observable_markov": false,
+  "enable_forecast_benchmarks": false,
+  "enable_nn_confirmation": false,
+  "enable_experiment_tracking": false,
+  "enable_stress_tests": false
+}

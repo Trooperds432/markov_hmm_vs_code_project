@@ -24,6 +24,12 @@ Optional forecast benchmarks require:
 pip install -r requirements-forecast.txt
 ```
 
+Optional OpenBB-style data enrichment requires:
+
+```bash
+pip install -r requirements-data.txt
+```
+
 The advanced adapters use package APIs and implementation patterns from the connected
 `hmmlearn`, `statsforecast`, and local LSTM stock-predictor repos. The project does not
 vendor those repositories or depend directly on GitHub forks; optional integrations
@@ -80,7 +86,7 @@ Core flags:
 - `--ticker`, `--benchmark`, `--start`, `--end`: override config values
 - `--profile`: `balanced`, `aggressive_growth`, or `low_drawdown`
 - `--quick`: fewer seeds/iterations/bootstrap paths and no plots unless `--plots`
-- `--check-deps`: print availability for `hmmlearn`, `statsforecast`, `torch`, `statsmodels`, and `yfinance`
+- `--check-deps`: print availability for `hmmlearn`, `statsforecast`, `torch`, `statsmodels`, `yfinance`, and `openbb`
 
 Research modes:
 
@@ -115,6 +121,8 @@ Diagnostics:
 - `hmm_synthetic_sample_stress.csv`: fitted-HMM sample-path stress rows
 - `factor_data_coverage.csv`: downloaded factor symbol coverage
 - `feature_summary.csv`: feature distribution and missingness summary
+- `data_provider_metadata.csv`, `data_provider_warnings.csv`: Stage 2E provider coverage and structured warning rows
+- `feature_group_metadata.csv`, `feature_group_warnings.csv`: feature-group contracts, produced columns, and optional skip reasons
 - `observable_markov_baseline.csv`, `observable_markov_stationary_distribution.csv`: transparent Markov baseline labels and stationary probabilities
 - `nn_predictions.csv`, `nn_forecasts.csv`, `nn_oos_split_info.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics, including `multi_signal` mode when configured
 - `volatility_forecasts.csv`: realised, EWMA, GARCH, and ARCH volatility forecasts
@@ -136,6 +144,12 @@ Other modes:
 - Paper simulation: `paper_orders.csv`, `paper_positions.csv`, `paper_daily_equity.csv`, `paper_equity.csv`, `paper_risk_checks.csv`
 - Experiments: `experiments/runs/...` config snapshots, environment info, copied CSVs, and `experiments/registry/model_registry.csv`
 - Stage 2D diagnostics: `outputs/diagnostics/dependency_report.json`, `dependency_report.txt`, `split_registry.csv`, `model_selection_candidates.csv`, `baseline_comparison.csv`, and `experiment_metadata.json`
+
+Stage 2E data-platform docs:
+
+- `docs/data_layer.md`: providers, cache fallback, and dependency behavior
+- `docs/feature_groups.md`: required and optional feature-group contracts
+- `docs/no_lookahead_contract.md`: point-in-time joins and leakage rules
 
 ## Common Errors
 

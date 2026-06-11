@@ -49,6 +49,8 @@ def ci_smoke_config(cfg: PipelineConfig) -> PipelineConfig:
         cfg,
         ticker="SYNTH",
         benchmark="SYNB",
+        data_provider="synthetic",
+        synthetic_periods=360,
         random_seed=int(cfg.random_seed),
         deterministic=True,
         train_window=80,

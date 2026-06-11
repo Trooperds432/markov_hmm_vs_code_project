@@ -86,3 +86,7 @@ def test_run_single_writes_stage2a_additive_outputs(monkeypatch, tmp_path):
     assert (tmp_path / "observable_markov_baseline.csv").exists()
     assert (tmp_path / "observable_markov_stationary_distribution.csv").exists()
     assert (tmp_path / "model_overfit_report.csv").exists()
+    assert (tmp_path / "data_provider_metadata.csv").exists()
+    assert (tmp_path / "data_provider_warnings.csv").exists()
+    assert (tmp_path / "feature_group_metadata.csv").exists()
+    assert (tmp_path / "feature_group_warnings.csv").exists()

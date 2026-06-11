@@ -38,3 +38,17 @@ def test_dangerous_near_zero_signal_is_warning():
     issues = validate_config(PipelineConfig(min_signal=0.0))
 
     assert any(issue.field == "min_signal" and issue.severity == "warning" for issue in issues)
+
+
+def test_invalid_data_provider_is_detected():
+    issues = validate_config(PipelineConfig(data_provider="not_real"))
+
+    assert any(issue.field == "data_provider" and issue.severity == "error" for issue in issues)
+
+
+def test_unknown_feature_group_is_detected():
+    issues = validate_config(PipelineConfig(feature_groups_enabled=("price_core", "future_magic")))
+
+    assert any(
+        issue.field == "feature_groups_enabled" and issue.severity == "error" for issue in issues
+    )

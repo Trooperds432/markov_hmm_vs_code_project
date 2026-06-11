@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 
 from .config import PipelineConfig
+from .data_providers.factory import get_data_provider
+from .feature_blocks.runner import build_configured_feature_groups
 
 
 def zscore(series: pd.Series, window: int) -> pd.Series:
@@ -185,6 +187,38 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     out["alpha_score_short"] += (out["ema_slope"] < 0).astype(int)
     out["alpha_score_short"] += out["atr_rank"].between(0.08, 0.96).astype(int)
 
+    feature_group_attrs: dict[str, object] = {}
+    try:
+        feature_group_result = build_configured_feature_groups(
+            out,
+            cfg,
+            provider=get_data_provider(cfg),
+        )
+        for column in feature_group_result.features.columns:
+            out[column] = feature_group_result.features[column].replace(
+                [np.inf, -np.inf],
+                np.nan,
+            )
+        feature_group_attrs = {
+            "feature_group_metadata": feature_group_result.metadata.to_dict("records"),
+            "feature_group_warnings": feature_group_result.warnings.to_dict("records"),
+            "feature_group_produced_columns": feature_group_result.produced_columns,
+            "feature_group_skipped": feature_group_result.skipped,
+        }
+    except Exception as err:
+        warning = {
+            "feature_group": "configured_feature_groups",
+            "feature": "",
+            "reason": "feature_group_error",
+            "detail": f"{type(err).__name__}: {err}",
+        }
+        feature_group_attrs = {
+            "feature_group_metadata": [],
+            "feature_group_warnings": [warning],
+            "feature_group_produced_columns": [],
+            "feature_group_skipped": [warning],
+        }
+
     required_columns = feature_columns(cfg) + [
         "ret_1",
         "rv_realised",
@@ -195,7 +229,9 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
         "alpha_score_long",
         "alpha_score_short",
     ]
-    return out.replace([np.inf, -np.inf], np.nan).dropna(subset=required_columns).copy()
+    clean = out.replace([np.inf, -np.inf], np.nan).dropna(subset=required_columns).copy()
+    clean.attrs.update(feature_group_attrs)
+    return clean
 
 
 def feature_summary(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
@@ -215,3 +251,35 @@ def feature_summary(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+
+
+def feature_group_metadata(df: pd.DataFrame) -> pd.DataFrame:
+    metadata = df.attrs.get("feature_group_metadata")
+    if isinstance(metadata, pd.DataFrame):
+        return metadata.copy()
+    if isinstance(metadata, list):
+        frame = pd.DataFrame(metadata)
+        columns = ["feature_group", "feature", "status"]
+        for column in columns:
+            if column not in frame:
+                frame[column] = pd.Series(dtype=object)
+        return frame[columns]
+    return pd.DataFrame(columns=["feature_group", "feature", "status"])
+
+
+def feature_group_warnings(df: pd.DataFrame) -> pd.DataFrame:
+    columns = ["feature_group", "feature", "reason", "detail"]
+    warnings = df.attrs.get("feature_group_warnings")
+    if isinstance(warnings, pd.DataFrame):
+        frame = warnings.copy()
+        for column in columns:
+            if column not in frame:
+                frame[column] = pd.Series(dtype=object)
+        return frame[columns]
+    if isinstance(warnings, list):
+        frame = pd.DataFrame(warnings)
+        for column in columns:
+            if column not in frame:
+                frame[column] = pd.Series(dtype=object)
+        return frame[columns]
+    return pd.DataFrame(columns=columns)

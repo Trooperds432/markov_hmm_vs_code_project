@@ -1,0 +1,20 @@
+{
+  "ticker": "SYNTH",
+  "benchmark": "SYNB",
+  "data_provider": "synthetic",
+  "synthetic_periods": 420,
+  "start": "2020-01-01",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 10,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_hmm_model_selection": false,
+  "feature_groups_enabled": ["price_core", "volatility_core", "macro", "fundamentals", "news"],
+  "enable_volatility_forecasts": false,
+  "enable_observable_markov": false,
+  "enable_forecast_benchmarks": false,
+  "enable_nn_confirmation": false,
+  "enable_experiment_tracking": false,
+  "enable_stress_tests": false
+}

@@ -4,6 +4,21 @@ from dataclasses import dataclass
 
 from .config import PipelineConfig
 
+KNOWN_DATA_PROVIDERS = {"yfinance", "csv", "synthetic", "openbb"}
+KNOWN_FEATURE_GROUPS = {
+    "price_core",
+    "volatility_core",
+    "technical",
+    "alpha158_lite",
+    "breadth",
+    "macro",
+    "fundamentals",
+    "news",
+    "options",
+    "famafrench",
+    "alt_bars",
+}
+
 
 @dataclass(frozen=True)
 class ConfigValidationIssue:
@@ -27,6 +42,23 @@ def validate_config(cfg: PipelineConfig) -> list[ConfigValidationIssue]:
     issues: list[ConfigValidationIssue] = []
     if cfg.n_states < 2:
         _issue(issues, "n_states", "error", "must be >= 2", cfg.n_states)
+    if cfg.data_provider not in KNOWN_DATA_PROVIDERS:
+        _issue(
+            issues,
+            "data_provider",
+            "error",
+            f"must be one of {sorted(KNOWN_DATA_PROVIDERS)}",
+            cfg.data_provider,
+        )
+    unknown_groups = sorted(set(cfg.feature_groups_enabled).difference(KNOWN_FEATURE_GROUPS))
+    if unknown_groups:
+        _issue(
+            issues,
+            "feature_groups_enabled",
+            "error",
+            f"unknown feature groups: {unknown_groups}",
+            unknown_groups,
+        )
     if cfg.train_window <= cfg.retrain_frequency:
         _issue(
             issues,

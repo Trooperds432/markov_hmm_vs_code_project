@@ -25,6 +25,18 @@ HMM outputs:
 `hmm_stationary_distribution.csv` includes `state`, `probability`, `model_type`,
 `n_states`, `covariance_type`, `seed`, and `n_mix` alongside component diagnostics.
 
+Data and feature outputs:
+
+- `factor_data_coverage.csv`
+- `feature_summary.csv`
+- `data_provider_metadata.csv`
+- `data_provider_warnings.csv`
+- `feature_group_metadata.csv`
+- `feature_group_warnings.csv`
+
+Stage 2E provider and feature-group outputs use structured metadata/warning rows so
+optional enrichment can skip cleanly without hiding missing provider support.
+
 Benchmark outputs:
 
 - `observable_markov_baseline.csv`

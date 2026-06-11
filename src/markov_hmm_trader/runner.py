@@ -8,11 +8,16 @@ import pandas as pd
 from .backtest import walk_forward_backtest
 from .benchmark import run_markov_regression_benchmark
 from .config import PipelineConfig
-from .data import factor_data_coverage, load_market_data
+from .data import (
+    data_provider_metadata,
+    data_provider_warnings,
+    factor_data_coverage,
+    load_market_data,
+)
 from .diagnostics import summarize_states
 from .ensemble import ensemble_diagnostics
 from .experiment import finalize_experiment_run, start_experiment_run
-from .features import feature_summary, make_features
+from .features import feature_group_metadata, feature_group_warnings, feature_summary, make_features
 from .forecast_benchmarks import run_forecast_benchmarks
 from .metrics import add_backtest_metric_columns, make_report
 from .model_overfit_report import (
@@ -77,7 +82,17 @@ def run_single(
         print("Saving diagnostics...")
         additional_overfit_reports = []
         factor_data_coverage(raw).to_csv(output_dir / "factor_data_coverage.csv", index=False)
+        data_provider_metadata(raw).to_csv(output_dir / "data_provider_metadata.csv", index=False)
+        data_provider_warnings(raw).to_csv(output_dir / "data_provider_warnings.csv", index=False)
         feature_summary(features, run_cfg).to_csv(output_dir / "feature_summary.csv", index=False)
+        feature_group_metadata(features).to_csv(
+            output_dir / "feature_group_metadata.csv",
+            index=False,
+        )
+        feature_group_warnings(features).to_csv(
+            output_dir / "feature_group_warnings.csv",
+            index=False,
+        )
         result.window_diagnostics.to_csv(output_dir / "window_diagnostics.csv", index=False)
         result.seed_diagnostics.to_csv(output_dir / "seed_diagnostics.csv", index=False)
         summarize_states(backtest, result.window_diagnostics).to_csv(
