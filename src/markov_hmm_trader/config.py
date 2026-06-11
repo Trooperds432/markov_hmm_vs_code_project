@@ -98,6 +98,10 @@ class PipelineConfig:
 
     # Reporting
     bars_per_year: int = 252
+    random_seed: int = 42
+    deterministic: bool = True
+    purge_bars: int = 0
+    embargo_bars: int = 0
 
     # Diagnostics and stress testing
     enable_diagnostics: bool = True
