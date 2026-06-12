@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from .alt_data.overlays import compute_alt_data_overlay
 from .confidence import apply_statistical_confidence_scaling
 from .config import PipelineConfig
 from .diagnostics import (
@@ -114,6 +115,8 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
 
     target = long_exposure if abs(long_exposure) >= abs(short_exposure) else short_exposure
     target *= apply_statistical_confidence_scaling(row, cfg)
+    if cfg.use_alt_data_position_overlay:
+        target *= float(compute_alt_data_overlay(row, cfg)["alt_data_position_multiplier"])
     return float(np.clip(target, -cfg.max_exposure, cfg.max_exposure))
 
 

@@ -18,6 +18,22 @@ def build_configured_feature_groups(
         cfg.enable_research_public_features or cfg.use_research_public_hmm_features
     ) and "research_public" not in configured_groups:
         configured_groups.append("research_public")
+    alt_auto_groups = []
+    if cfg.enable_alt_data_features or cfg.enable_glassdoor_features:
+        alt_auto_groups.append("glassdoor_sentiment")
+    if cfg.enable_alt_data_features or cfg.enable_wsb_features:
+        alt_auto_groups.append("wsb_attention")
+    if cfg.enable_alt_data_features or cfg.enable_valuation_features:
+        alt_auto_groups.append("valuation_anchor")
+    if (
+        cfg.enable_alt_data_features
+        or cfg.use_alt_data_position_overlay
+        or cfg.use_alt_data_portfolio_ranking
+    ):
+        alt_auto_groups.append("alt_data_overlays")
+    for group in alt_auto_groups:
+        if group not in configured_groups:
+            configured_groups.append(group)
     groups = list(
         dict.fromkeys(
             canonical_feature_group(group)
@@ -30,15 +46,17 @@ def build_configured_feature_groups(
     warning_frames = []
     produced_columns: list[str] = []
     skipped: list[dict[str, str]] = []
+    current = df.copy()
     for group in groups:
         if group in BUILDERS:
             if group not in enabled:
                 continue
-            result = BUILDERS[group](df, cfg, provider)
+            result = BUILDERS[group](current, cfg, provider)
         else:
             continue
         if not result.features.empty:
             feature_frames.append(result.features)
+            current = pd.concat([current, result.features], axis=1)
         if not result.metadata.empty:
             metadata_frames.append(result.metadata)
         if not result.warnings.empty:

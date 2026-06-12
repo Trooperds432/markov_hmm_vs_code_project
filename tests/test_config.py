@@ -104,3 +104,24 @@ def test_research_public_tuple_fields_load(tmp_path):
     assert cfg.research_public_hmm_features == ("acf_1", "ewma_vol_20d")
     assert cfg.stationarity_windows == (60,)
     assert cfg.acf_lags == (1, 5)
+
+
+def test_alt_data_tuple_fields_load(tmp_path):
+    path = tmp_path / "alt_cfg.json"
+    path.write_text(
+        """
+        {
+          "enable_alt_data_features": true,
+          "wsb_z_windows": [10, 30],
+          "glassdoor_recent_windows": [30, 180],
+          "alt_data_hmm_features": ["glassdoor_stress_z", "margin_of_safety"]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    cfg = load_config(path)
+
+    assert cfg.wsb_z_windows == (10, 30)
+    assert cfg.glassdoor_recent_windows == (30, 180)
+    assert cfg.alt_data_hmm_features == ("glassdoor_stress_z", "margin_of_safety")

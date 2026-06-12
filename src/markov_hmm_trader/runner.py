@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .alt_data.diagnostics import alt_data_feature_summary, alt_data_warnings
 from .backtest import walk_forward_backtest
 from .benchmark import run_markov_regression_benchmark
 from .config import PipelineConfig
@@ -45,6 +46,7 @@ from .nn_model import (
 )
 from .observable_markov import run_observable_markov
 from .plots import save_plots
+from .random_baselines import run_random_timing_baseline, summarize_random_baseline
 from .stress import (
     make_asset_bootstrap_stress,
     make_cost_slippage_stress,
@@ -62,6 +64,14 @@ def _combined_warnings(raw: pd.DataFrame, features: pd.DataFrame) -> pd.DataFram
     if not clean:
         return normalize_warning_frame(None)
     return normalize_warning_frame(pd.concat(clean, ignore_index=True))
+
+
+def _features_with_date(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    if not columns:
+        return pd.DataFrame(columns=["date"])
+    out = frame[columns].copy()
+    out.insert(0, "date", out.index)
+    return out
 
 
 def run_single(
@@ -138,6 +148,50 @@ def run_single(
             output_dir / "feature_group_warnings.csv",
             index=False,
         )
+        if run_cfg.enable_alt_data_features or any(
+            [
+                run_cfg.enable_glassdoor_features,
+                run_cfg.enable_wsb_features,
+                run_cfg.enable_valuation_features,
+                run_cfg.use_alt_data_position_overlay,
+                run_cfg.use_alt_data_portfolio_ranking,
+            ]
+        ):
+            metadata = feature_group_metadata(features)
+            source = dict(zip(metadata["feature"], metadata["feature_group"], strict=False))
+            glassdoor_cols = [
+                col for col, group in source.items() if group == "glassdoor_sentiment"
+            ]
+            wsb_cols = [col for col, group in source.items() if group == "wsb_attention"]
+            valuation_cols = [col for col, group in source.items() if group == "valuation_anchor"]
+            overlay_cols = [col for col, group in source.items() if group == "alt_data_overlays"]
+            _features_with_date(features, glassdoor_cols).to_csv(
+                output_dir / "glassdoor_features.csv", index=False
+            )
+            _features_with_date(features, wsb_cols).to_csv(
+                output_dir / "wsb_attention_features.csv", index=False
+            )
+            _features_with_date(features, valuation_cols).to_csv(
+                output_dir / "valuation_features.csv", index=False
+            )
+            _features_with_date(backtest, overlay_cols).to_csv(
+                output_dir / "alt_data_overlay.csv", index=False
+            )
+            alt_data_feature_summary(features).to_csv(
+                output_dir / "alt_data_feature_summary.csv", index=False
+            )
+            alt_groups = {
+                "glassdoor_sentiment",
+                "wsb_attention",
+                "valuation_anchor",
+                "alt_data_overlays",
+            }
+            alt_warnings = alt_data_warnings(
+                feature_group_warnings(features).loc[
+                    feature_group_warnings(features)["feature_group"].isin(alt_groups)
+                ]
+            )
+            alt_warnings.to_csv(output_dir / "alt_data_warnings.csv", index=False)
         result.window_diagnostics.to_csv(output_dir / "window_diagnostics.csv", index=False)
         result.seed_diagnostics.to_csv(output_dir / "seed_diagnostics.csv", index=False)
         summarize_states(backtest, result.window_diagnostics).to_csv(
@@ -212,6 +266,13 @@ def run_single(
                 output_dir / "model_overfit_report.csv",
                 index=False,
             )
+
+    if run_cfg.enable_random_baseline:
+        random_paths = run_random_timing_baseline(backtest, run_cfg)
+        random_paths.to_csv(output_dir / "random_baseline_paths.csv", index=False)
+        summarize_random_baseline(stats, random_paths, run_cfg).to_csv(
+            output_dir / "random_baseline_summary.csv", index=False
+        )
 
     if stress_enabled:
         print("Saving stress tests...")

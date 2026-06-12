@@ -102,3 +102,13 @@ def test_validation_only_columns_are_blocked_from_hmm_features():
 
     with pytest.raises(ValueError, match="Validation-only"):
         feature_columns(cfg)
+
+
+def test_alt_data_validation_columns_are_blocked_from_hmm_features():
+    cfg = PipelineConfig(
+        use_alt_data_hmm_features=True,
+        alt_data_hmm_features=("glassdoor_stress_z", "actual_outperformance"),
+    )
+
+    with pytest.raises(ValueError, match="Validation-only"):
+        feature_columns(cfg)

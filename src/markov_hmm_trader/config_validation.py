@@ -19,6 +19,10 @@ KNOWN_FEATURE_GROUPS = {
     "famafrench",
     "alt_bars",
     "research_public",
+    "glassdoor_sentiment",
+    "wsb_attention",
+    "valuation_anchor",
+    "alt_data_overlays",
 }
 
 

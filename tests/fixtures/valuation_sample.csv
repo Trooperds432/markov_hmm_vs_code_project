@@ -1,0 +1,6 @@
+date,ticker,close,ttm_eps,eps_growth_rate,bond_yield,graham_intrinsic_value
+2020-01-02,SYNTH,100,5.0,0.10,0.04,120
+2020-02-03,SYNTH,105,5.1,0.10,0.04,150
+2020-03-02,SYNTH,110,5.2,0.09,0.04,80
+2020-04-01,SYNTH,95,5.3,0.08,0.04,160
+2020-05-01,OTHER,100,3.0,0.03,0.04,90

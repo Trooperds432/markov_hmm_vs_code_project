@@ -7,10 +7,12 @@ import pandas as pd
 from ..config import PipelineConfig
 from ..data_providers.base import BaseDataProvider
 from .alt_bars import build_alt_bar_features
+from .alt_data_overlays import build_alt_data_overlays
 from .base import FeatureBlockResult
 from .breadth_features import build_breadth_features
 from .famafrench_features import build_famafrench_features
 from .fundamental_features import build_fundamental_features
+from .glassdoor_sentiment import build_glassdoor_sentiment
 from .macro_features import build_macro_features
 from .news_features import build_news_features
 from .options_features import build_options_features
@@ -18,7 +20,9 @@ from .price_core import build_price_core
 from .qlib_alpha_features import build_alpha158_lite
 from .research_public_features import build_research_public_features
 from .technical_features import build_technical_features
+from .valuation_anchor import build_valuation_anchor
 from .volatility_core import build_volatility_core
+from .wsb_attention import build_wsb_attention
 
 FeatureBuilder = Callable[
     [pd.DataFrame, PipelineConfig, BaseDataProvider | None], FeatureBlockResult
@@ -46,6 +50,10 @@ BUILDERS: dict[str, FeatureBuilder] = {
     "famafrench": lambda df, cfg, provider: build_famafrench_features(df, cfg, provider),
     "alt_bars": lambda df, cfg, provider: build_alt_bar_features(df),
     "research_public": lambda df, cfg, provider: build_research_public_features(df, cfg, provider),
+    "glassdoor_sentiment": lambda df, cfg, provider: build_glassdoor_sentiment(df, cfg, provider),
+    "wsb_attention": lambda df, cfg, provider: build_wsb_attention(df, cfg, provider),
+    "valuation_anchor": lambda df, cfg, provider: build_valuation_anchor(df, cfg, provider),
+    "alt_data_overlays": lambda df, cfg, provider: build_alt_data_overlays(df, cfg, provider),
 }
 
 KNOWN_FEATURE_GROUPS = set(BUILDERS).union(FEATURE_GROUP_ALIASES)

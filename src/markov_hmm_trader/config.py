@@ -99,6 +99,56 @@ class PipelineConfig:
     min_statistical_confidence_mult: float = 0.25
     max_statistical_confidence_mult: float = 1.25
     use_research_public_state_mapping: bool = False
+    enable_alt_data_features: bool = False
+    enable_glassdoor_features: bool = False
+    enable_wsb_features: bool = False
+    enable_valuation_features: bool = False
+    use_alt_data_position_overlay: bool = False
+    use_alt_data_portfolio_ranking: bool = False
+    glassdoor_reviews_path: str = ""
+    glassdoor_company_mapping_path: str = ""
+    wsb_mentions_path: str = ""
+    wsb_ticker_universe_path: str = ""
+    valuation_data_path: str = ""
+    glassdoor_lookback_days: int = 365
+    glassdoor_recent_windows: tuple[int, ...] = (90, 365)
+    glassdoor_publication_lag_days: int = 7
+    glassdoor_min_reviews: int = 5
+    glassdoor_stress_z_window: int = 12
+    wsb_lookback_days: int = 60
+    wsb_z_windows: tuple[int, ...] = (20, 60)
+    wsb_high_attention_z: float = 3.0
+    wsb_extreme_attention_z: float = 5.0
+    wsb_publication_lag_days: int = 1
+    wsb_min_mentions: int = 1
+    valuation_publication_lag_days: int = 3
+    valuation_margin_threshold: float = 0.25
+    valuation_deep_value_threshold: float = 0.50
+    valuation_overvalued_threshold: float = -0.25
+    valuation_z_window: int = 252
+    glassdoor_stress_position_mult_moderate: float = 0.75
+    glassdoor_stress_position_mult_extreme: float = 0.50
+    wsb_attention_position_mult_high: float = 0.75
+    wsb_attention_position_mult_extreme: float = 0.50
+    valuation_bull_boost_mult: float = 1.25
+    valuation_short_allow_threshold: float = -0.25
+    valuation_avoid_short_threshold: float = 0.50
+    use_alt_data_hmm_features: bool = False
+    alt_data_hmm_features: tuple[str, ...] = (
+        "glassdoor_stress_z",
+        "glassdoor_sentiment_score",
+        "glassdoor_review_intensity",
+        "wsb_mentions_z_20d",
+        "wsb_mentions_z_60d",
+        "wsb_attention_volatility",
+        "wsb_meme_risk_score",
+        "margin_of_safety",
+        "price_to_intrinsic",
+        "valuation_zscore",
+    )
+    enable_random_baseline: bool = False
+    random_baseline_paths: int = 1000
+    random_baseline_seed: int = 42
 
     # HMM
     n_states: int = 3
@@ -393,6 +443,7 @@ def load_config(path: str | Path) -> PipelineConfig:
         "hmm_feature_set",
         "research_public_feature_set",
         "research_public_hmm_features",
+        "alt_data_hmm_features",
     ):
         if key in raw and isinstance(raw[key], list):
             raw[key] = ["alpha158_lite" if item == "qlib_alpha" else item for item in raw[key]]
@@ -414,6 +465,9 @@ def load_config(path: str | Path) -> PipelineConfig:
         "cointegration_peer_symbols",
         "factor_rank_universe",
         "research_public_hmm_features",
+        "glassdoor_recent_windows",
+        "wsb_z_windows",
+        "alt_data_hmm_features",
         "feature_winsorize_limits",
         "hmm_model_types",
         "hmm_model_type_candidates",

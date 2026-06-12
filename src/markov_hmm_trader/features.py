@@ -74,6 +74,9 @@ FORBIDDEN_HMM_FEATURE_TOKENS = (
     "factor_hit_rate",
     "factor_decay",
     "hypothesis",
+    "next_365d_return",
+    "actual_outperformance",
+    "realised_future_alpha",
 )
 
 
@@ -98,6 +101,10 @@ def feature_columns(cfg: PipelineConfig | None = None) -> list[str]:
         columns.extend(FACTOR_FEATURE_COLUMNS)
     if cfg is not None and cfg.use_research_public_hmm_features:
         for column in cfg.research_public_hmm_features:
+            if column not in columns:
+                columns.append(column)
+    if cfg is not None and cfg.use_alt_data_hmm_features:
+        for column in cfg.alt_data_hmm_features:
             if column not in columns:
                 columns.append(column)
     validate_hmm_observation_columns(columns)

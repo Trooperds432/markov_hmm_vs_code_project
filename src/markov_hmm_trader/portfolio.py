@@ -5,6 +5,7 @@ from dataclasses import replace
 import numpy as np
 import pandas as pd
 
+from .alt_data.overlays import adjusted_portfolio_score
 from .config import PipelineConfig
 from .data import load_market_data
 from .factor_validation import factor_rank_diagnostics, long_short_spread_diagnostics
@@ -91,6 +92,14 @@ def run_portfolio(cfg: PipelineConfig, output_dir) -> dict[str, pd.DataFrame | p
                     "bear_probability": latest.get(STATE_BEAR, np.nan),
                     "trend_score": latest.get("alpha_score_long", np.nan),
                     "relative_strength": latest.get("rel_ret_20", np.nan),
+                    "glassdoor_stress_z": latest.get("glassdoor_stress_z", np.nan),
+                    "wsb_mentions_z_20d": latest.get("wsb_mentions_z_20d", np.nan),
+                    "wsb_meme_risk_score": latest.get("wsb_meme_risk_score", np.nan),
+                    "margin_of_safety": latest.get("margin_of_safety", np.nan),
+                    "valuation_percentile": latest.get("valuation_percentile", np.nan),
+                    "alt_data_risk_score": latest.get("alt_data_risk_score", np.nan),
+                    "alt_data_confidence_score": latest.get("alt_data_confidence_score", np.nan),
+                    "adjusted_portfolio_score": adjusted_portfolio_score(latest, cfg),
                 }
             )
         except Exception as err:
@@ -115,6 +124,13 @@ def run_portfolio(cfg: PipelineConfig, output_dir) -> dict[str, pd.DataFrame | p
             for symbol, bt in asset_backtests.items()
         }
     ).reindex(returns.index)
+    if cfg.use_alt_data_portfolio_ranking:
+        scores = pd.DataFrame(
+            {
+                symbol: bt.apply(lambda row: adjusted_portfolio_score(row, cfg), axis=1)
+                for symbol, bt in asset_backtests.items()
+            }
+        ).reindex(returns.index)
     volatility = returns.rolling(63).std(ddof=0).fillna(returns.expanding().std(ddof=0))
     weights = pd.DataFrame(0.0, index=returns.index, columns=returns.columns)
 
