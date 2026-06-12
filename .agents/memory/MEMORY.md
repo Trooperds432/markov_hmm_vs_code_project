@@ -1,0 +1,2 @@
+- [Replit port detection](replit-port-binding.md) — uvicorn on 127.0.0.1 runs but workflow port-probe fails; bind 0.0.0.0 so waitForPort passes.
+- [Quant CLI web wrapper](quant-web-wrapper.md) — how the FastAPI app wraps the existing main.py engine safely (generated config + allow-list flags).

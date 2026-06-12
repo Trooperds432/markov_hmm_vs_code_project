@@ -12,3 +12,13 @@ experiments/registry/*.csv
 !experiments/registry/.gitkeep
 .env
 .DS_Store
+
+# Node / frontend
+node_modules/
+app/frontend/dist/
+app/frontend/node_modules/
+.vite/
+
+# App run artifacts
+outputs/app_runs/
+outputs/_probe/

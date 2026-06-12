@@ -1,0 +1,5 @@
+# Web app layer (FastAPI backend) for the Quant Terminal UI.
+# The research engine's own dependencies live in requirements.txt / requirements-ml.txt.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9

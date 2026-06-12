@@ -1,0 +1,55 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-terminal-bg text-terminal-text font-sans antialiased;
+  background-image: radial-gradient(
+      circle at 18% -10%,
+      rgba(63, 167, 255, 0.06),
+      transparent 45%
+    ),
+    radial-gradient(circle at 100% 0%, rgba(19, 201, 138, 0.05), transparent 40%);
+  background-attachment: fixed;
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+  .micro {
+    @apply text-[10px] uppercase tracking-[0.14em] text-terminal-muted;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #232f40;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #31415a;
+}
+
+.grid-bg {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 22px 22px;
+}

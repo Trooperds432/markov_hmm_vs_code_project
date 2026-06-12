@@ -20,3 +20,6 @@ scikit-learn
 scipy
 statsmodels
 yfinance
+fastapi
+python-multipart
+uvicorn[standard]
