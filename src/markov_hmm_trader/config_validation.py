@@ -9,6 +9,7 @@ KNOWN_FEATURE_GROUPS = {
     "price_core",
     "volatility_core",
     "technical",
+    "qlib_alpha",
     "alpha158_lite",
     "breadth",
     "macro",

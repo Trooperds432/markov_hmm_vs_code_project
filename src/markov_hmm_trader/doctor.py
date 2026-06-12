@@ -15,6 +15,7 @@ REQUIRED_PACKAGES = {
     "numpy": "numpy",
     "pandas": "pandas",
     "matplotlib": "matplotlib",
+    "scipy": "scipy",
     "scikit-learn": "sklearn",
     "hmmlearn": "hmmlearn",
     "yfinance": "yfinance",
@@ -29,6 +30,7 @@ OPTIONAL_PACKAGES = {
     "arch": "arch",
     "statsforecast": "statsforecast",
     "openbb": "openbb",
+    "pyarrow": "pyarrow",
 }
 
 

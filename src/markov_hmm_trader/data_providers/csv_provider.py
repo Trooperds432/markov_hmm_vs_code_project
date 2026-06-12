@@ -22,6 +22,8 @@ class CSVProvider(UnsupportedCapabilityMixin):
             return Path(self.cfg.csv_benchmark_path)
         if self.cfg.csv_price_path:
             return Path(self.cfg.csv_price_path)
+        if self.cfg.csv_data_dir:
+            return Path(self.cfg.csv_data_dir) / f"{symbol}.csv"
         return Path(self.cfg.data_cache_dir) / f"{symbol}.csv"
 
     def get_price_history(

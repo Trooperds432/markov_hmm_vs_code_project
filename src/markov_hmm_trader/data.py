@@ -5,6 +5,7 @@ import pandas as pd
 
 from .config import PipelineConfig
 from .data_providers.factory import get_data_provider
+from .warnings import normalize_warning_frame
 
 
 def download_ohlcv(symbol: str, start: str, end: str | None, interval: str) -> pd.DataFrame:
@@ -141,14 +142,23 @@ def data_provider_warnings(df: pd.DataFrame) -> pd.DataFrame:
         for column in columns:
             if column not in frame:
                 frame[column] = pd.Series(dtype=object)
-        return frame[columns]
+        return normalize_warning_frame(frame).reindex(columns=columns)
     if isinstance(warnings, list):
         frame = pd.DataFrame(warnings)
         for column in columns:
             if column not in frame:
                 frame[column] = pd.Series(dtype=object)
-        return frame[columns]
+        return normalize_warning_frame(frame).reindex(columns=columns)
     return pd.DataFrame(columns=columns)
+
+
+def all_data_provider_warnings(df: pd.DataFrame) -> pd.DataFrame:
+    warnings = df.attrs.get("data_provider_warnings")
+    if isinstance(warnings, pd.DataFrame):
+        return normalize_warning_frame(warnings)
+    if isinstance(warnings, list):
+        return normalize_warning_frame(pd.DataFrame(warnings))
+    return normalize_warning_frame(None)
 
 
 def data_provider_metadata(df: pd.DataFrame) -> pd.DataFrame:

@@ -113,3 +113,86 @@ class YFinanceProvider(UnsupportedCapabilityMixin):
         out.index = pd.to_datetime(out.index)
         self._write_cache(symbol, out)
         return DataProviderResult(out, metadata=metadata_frame(self.name, symbol, out))
+
+    def get_company_news(
+        self,
+        symbol: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult:
+        try:
+            import yfinance as yf
+
+            rows = yf.Ticker(symbol).news or []
+            frame = pd.DataFrame(rows)
+            if "content" in frame:
+                content = pd.json_normalize(frame["content"])
+                frame = pd.concat([frame.drop(columns=["content"]), content], axis=1)
+            if "pubDate" in frame:
+                frame["published_at"] = pd.to_datetime(frame["pubDate"], errors="coerce")
+            elif "providerPublishTime" in frame:
+                frame["published_at"] = pd.to_datetime(
+                    frame["providerPublishTime"],
+                    unit="s",
+                    errors="coerce",
+                )
+            if "title" not in frame and "headline" not in frame:
+                title_cols = [column for column in frame.columns if "title" in column.lower()]
+                if title_cols:
+                    frame["title"] = frame[title_cols[0]]
+            return DataProviderResult(frame)
+        except Exception as err:
+            return DataProviderResult(
+                pd.DataFrame(),
+                warnings=pd.DataFrame(
+                    [
+                        {
+                            "provider": self.name,
+                            "symbol": symbol,
+                            "capability": "news",
+                            "reason": "provider_error",
+                            "detail": type(err).__name__,
+                        }
+                    ]
+                ),
+            )
+
+    def get_fundamentals(
+        self,
+        symbol: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult:
+        try:
+            import yfinance as yf
+
+            info = yf.Ticker(symbol).get_info()
+            frame = pd.DataFrame(
+                [
+                    {
+                        "date": pd.Timestamp.utcnow().normalize(),
+                        "revenue": info.get("totalRevenue"),
+                        "net_income": info.get("netIncomeToCommon"),
+                        "debt": info.get("totalDebt"),
+                        "equity": info.get("bookValue"),
+                        "free_cash_flow": info.get("freeCashflow"),
+                        "profit_margin_proxy": info.get("profitMargins"),
+                    }
+                ]
+            )
+            return DataProviderResult(frame)
+        except Exception as err:
+            return DataProviderResult(
+                pd.DataFrame(),
+                warnings=pd.DataFrame(
+                    [
+                        {
+                            "provider": self.name,
+                            "symbol": symbol,
+                            "capability": "fundamentals",
+                            "reason": "provider_error",
+                            "detail": type(err).__name__,
+                        }
+                    ]
+                ),
+            )

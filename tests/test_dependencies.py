@@ -15,6 +15,7 @@ def test_dependency_status_lists_required_packages():
     status = dependency_status()
 
     assert set(status["dependency"]) == set(DEPENDENCIES)
+    assert {"group", "required"}.issubset(status.columns)
     assert set(status["status"]).issubset({"available", "missing"})
 
 
@@ -23,6 +24,7 @@ def test_dependency_status_text_contract():
 
     for dependency in DEPENDENCIES:
         assert f"{dependency}:" in text
+    assert "[openbb_data]" in text
 
 
 def test_dependency_check_wrapper_uses_stage2_contract():

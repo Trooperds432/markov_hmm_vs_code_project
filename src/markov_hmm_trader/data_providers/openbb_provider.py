@@ -88,3 +88,110 @@ class OpenBBProvider(UnsupportedCapabilityMixin):
                 ]
             )
             return DataProviderResult(pd.DataFrame(), warnings=warnings)
+
+    def get_company_news(
+        self,
+        symbol: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult:
+        if not self.available:
+            return self._missing("news")
+        try:
+            from openbb import obb
+
+            frame = obb.news.company(symbol=symbol, start_date=start, end_date=end).to_df()
+            return DataProviderResult(frame)
+        except Exception as err:
+            return DataProviderResult(
+                pd.DataFrame(),
+                warnings=self._provider_error("news", err),
+            )
+
+    def get_fundamentals(
+        self,
+        symbol: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult:
+        if not self.available:
+            return self._missing("fundamentals")
+        try:
+            from openbb import obb
+
+            frame = obb.equity.fundamental.metrics(symbol=symbol).to_df()
+            return DataProviderResult(frame)
+        except Exception as err:
+            return DataProviderResult(
+                pd.DataFrame(),
+                warnings=self._provider_error("fundamentals", err),
+            )
+
+    def get_options_chain(self, symbol: str, date: str | None = None) -> DataProviderResult:
+        if not self.available:
+            return self._missing("options")
+        try:
+            from openbb import obb
+
+            frame = obb.derivatives.options.chains(symbol=symbol, expiration=date).to_df()
+            return DataProviderResult(frame)
+        except Exception as err:
+            return DataProviderResult(
+                pd.DataFrame(),
+                warnings=self._provider_error("options", err),
+            )
+
+    def get_options_surface(self, symbol: str, date: str | None = None) -> DataProviderResult:
+        return self.get_options_chain(symbol, date)
+
+    def get_macro_series(
+        self,
+        series_id: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult:
+        if not self.available:
+            return self._missing("macro")
+        try:
+            from openbb import obb
+
+            frame = obb.economy.fred_series(
+                series_id=series_id, start_date=start, end_date=end
+            ).to_df()
+            return DataProviderResult(frame)
+        except Exception as err:
+            return DataProviderResult(
+                pd.DataFrame(),
+                warnings=self._provider_error("macro", err),
+            )
+
+    def get_fama_french(
+        self,
+        dataset: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult:
+        if not self.available:
+            return self._missing("famafrench")
+        try:
+            from openbb import obb
+
+            frame = obb.economy.fama_french(dataset=dataset, start_date=start, end_date=end).to_df()
+            return DataProviderResult(frame)
+        except Exception as err:
+            return DataProviderResult(
+                pd.DataFrame(),
+                warnings=self._provider_error("famafrench", err),
+            )
+
+    def _provider_error(self, capability: str, err: Exception) -> pd.DataFrame:
+        return pd.DataFrame(
+            [
+                {
+                    "provider": self.name,
+                    "capability": capability,
+                    "reason": "provider_error",
+                    "detail": type(err).__name__,
+                }
+            ]
+        )

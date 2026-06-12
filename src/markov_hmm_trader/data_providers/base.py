@@ -5,6 +5,8 @@ from typing import Protocol
 
 import pandas as pd
 
+from ..warnings import StructuredWarning, warning_to_row
+
 
 @dataclass(frozen=True)
 class ProviderWarning:
@@ -34,6 +36,45 @@ class BaseDataProvider(Protocol):
         interval: str,
     ) -> DataProviderResult: ...
 
+    def get_company_news(
+        self,
+        symbol: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult: ...
+
+    def get_fundamentals(
+        self,
+        symbol: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult: ...
+
+    def get_options_chain(self, symbol: str, date: str | None = None) -> DataProviderResult: ...
+
+    def get_options_surface(self, symbol: str, date: str | None = None) -> DataProviderResult: ...
+
+    def get_macro_series(
+        self,
+        series_id: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult: ...
+
+    def get_market_snapshots(
+        self,
+        symbols: list[str] | None = None,
+    ) -> DataProviderResult: ...
+
+    def get_index_constituents(self, index_symbol: str) -> DataProviderResult: ...
+
+    def get_fama_french(
+        self,
+        dataset: str,
+        start: str,
+        end: str | None,
+    ) -> DataProviderResult: ...
+
 
 class UnsupportedCapabilityMixin:
     name = "base"
@@ -44,12 +85,19 @@ class UnsupportedCapabilityMixin:
     def _unsupported(self, capability: str, reason: str = "unsupported_capability") -> pd.DataFrame:
         return pd.DataFrame(
             [
-                {
-                    "provider": self.name,
-                    "capability": capability,
-                    "reason": reason,
-                    "detail": "",
-                }
+                warning_to_row(
+                    StructuredWarning(
+                        code=reason,
+                        severity="warning",
+                        module=f"data_provider.{self.name}",
+                        message=f"{self.name} does not support {capability}.",
+                        details={"provider": self.name, "capability": capability},
+                    ),
+                    provider=self.name,
+                    capability=capability,
+                    reason=reason,
+                    detail=capability,
+                )
             ]
         )
 

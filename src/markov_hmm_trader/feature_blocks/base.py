@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
+from ..warnings import StructuredWarning, warning_to_row
+
 
 @dataclass
 class FeatureBlockResult:
@@ -24,12 +26,19 @@ def feature_metadata(name: str, columns: list[str]) -> pd.DataFrame:
 def skipped_feature_group(name: str, reason: str, detail: str = "") -> FeatureBlockResult:
     warning = pd.DataFrame(
         [
-            {
-                "feature_group": name,
-                "feature": "",
-                "reason": reason,
-                "detail": detail,
-            }
+            warning_to_row(
+                StructuredWarning(
+                    code=reason,
+                    severity="warning",
+                    module=f"feature_blocks.{name}",
+                    message=f"Feature group {name} skipped: {reason}.",
+                    details={"feature_group": name, "detail": detail},
+                ),
+                feature_group=name,
+                feature="",
+                reason=reason,
+                detail=detail,
+            )
         ]
     )
     return FeatureBlockResult(

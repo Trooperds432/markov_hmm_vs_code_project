@@ -19,12 +19,14 @@ class PipelineConfig:
     data_provider_candidates: tuple[str, ...] = ("yfinance", "openbb", "csv", "synthetic")
     data_cache_dir: str = "cache"
     data_failover_to_cache: bool = True
+    csv_data_dir: str | None = None
     csv_price_path: str = ""
     csv_benchmark_path: str = ""
     synthetic_periods: int = 360
     feature_groups_enabled: tuple[str, ...] = ("price_core", "volatility_core")
     optional_feature_groups: tuple[str, ...] = (
         "technical",
+        "qlib_alpha",
         "alpha158_lite",
         "breadth",
         "macro",
@@ -34,6 +36,10 @@ class PipelineConfig:
         "famafrench",
         "alt_bars",
     )
+    hmm_feature_set: tuple[str, ...] | None = None
+    max_feature_missing_ratio: float = 0.30
+    feature_winsorize_limits: tuple[float, float] = (0.01, 0.99)
+    use_processor_pipeline: bool = True
 
     # HMM
     n_states: int = 3
@@ -322,6 +328,9 @@ def load_config(path: str | Path) -> PipelineConfig:
         and "overfit_validation_test_gap_threshold" not in raw
     ):
         raw["overfit_validation_test_gap_threshold"] = raw["overfit_validation_test_gap_warn"]
+    for key in ("feature_groups_enabled", "optional_feature_groups", "hmm_feature_set"):
+        if key in raw and isinstance(raw[key], list):
+            raw[key] = ["alpha158_lite" if item == "qlib_alpha" else item for item in raw[key]]
 
     valid_names = {field.name for field in fields(PipelineConfig)}
     clean = {k: v for k, v in raw.items() if k in valid_names}
@@ -331,6 +340,8 @@ def load_config(path: str | Path) -> PipelineConfig:
         "data_provider_candidates",
         "feature_groups_enabled",
         "optional_feature_groups",
+        "hmm_feature_set",
+        "feature_winsorize_limits",
         "hmm_model_types",
         "hmm_model_type_candidates",
         "hmm_state_candidates",

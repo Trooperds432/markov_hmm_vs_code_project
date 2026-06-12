@@ -60,3 +60,23 @@ def test_stage2_alias_config_fields_are_mapped(tmp_path):
     assert cfg.vol_risk_lookback == 55
     assert cfg.overfit_train_validation_gap_threshold == 0.4
     assert cfg.overfit_validation_test_gap_threshold == 0.2
+
+
+def test_stage2e_feature_group_aliases_and_tuple_fields_load(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        """
+        {
+          "feature_groups_enabled": ["price_core", "qlib_alpha"],
+          "hmm_feature_set": ["z_ret_1"],
+          "feature_winsorize_limits": [0.02, 0.98]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    cfg = load_config(path)
+
+    assert cfg.feature_groups_enabled == ("price_core", "alpha158_lite")
+    assert cfg.hmm_feature_set == ("z_ret_1",)
+    assert cfg.feature_winsorize_limits == (0.02, 0.98)

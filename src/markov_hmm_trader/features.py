@@ -6,6 +6,8 @@ import pandas as pd
 from .config import PipelineConfig
 from .data_providers.factory import get_data_provider
 from .feature_blocks.runner import build_configured_feature_groups
+from .leakage import FeatureLeakageGuard
+from .warnings import normalize_warning_frame
 
 
 def zscore(series: pd.Series, window: int) -> pd.Series:
@@ -62,6 +64,8 @@ FACTOR_FEATURE_COLUMNS = [
 
 
 def feature_columns(cfg: PipelineConfig | None = None) -> list[str]:
+    if cfg is not None and cfg.hmm_feature_set:
+        return list(cfg.hmm_feature_set)
     columns = list(BASE_FEATURE_COLUMNS)
     if cfg is not None and cfg.use_extra_factor_features:
         columns.extend(FACTOR_FEATURE_COLUMNS)
@@ -229,6 +233,12 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
         "alpha_score_long",
         "alpha_score_short",
     ]
+    missing_required = [column for column in required_columns if column not in out]
+    if missing_required:
+        raise ValueError(
+            "Configured feature columns are missing after feature construction: "
+            f"{missing_required}"
+        )
     clean = out.replace([np.inf, -np.inf], np.nan).dropna(subset=required_columns).copy()
     clean.attrs.update(feature_group_attrs)
     return clean
@@ -275,11 +285,50 @@ def feature_group_warnings(df: pd.DataFrame) -> pd.DataFrame:
         for column in columns:
             if column not in frame:
                 frame[column] = pd.Series(dtype=object)
-        return frame[columns]
+        return normalize_warning_frame(frame).reindex(columns=columns)
     if isinstance(warnings, list):
         frame = pd.DataFrame(warnings)
         for column in columns:
             if column not in frame:
                 frame[column] = pd.Series(dtype=object)
-        return frame[columns]
+        return normalize_warning_frame(frame).reindex(columns=columns)
     return pd.DataFrame(columns=columns)
+
+
+def all_feature_warnings(df: pd.DataFrame) -> pd.DataFrame:
+    warnings = df.attrs.get("feature_group_warnings")
+    if isinstance(warnings, pd.DataFrame):
+        return normalize_warning_frame(warnings)
+    if isinstance(warnings, list):
+        return normalize_warning_frame(pd.DataFrame(warnings))
+    return normalize_warning_frame(None)
+
+
+def feature_manifest(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
+    metadata = feature_group_metadata(df)
+    guard = FeatureLeakageGuard()
+    hmm_columns = set(feature_columns(cfg))
+    rows = []
+    source_by_feature = {row.feature: row.feature_group for row in metadata.itertuples(index=False)}
+    manifest_columns = list(dict.fromkeys([*feature_columns(cfg), *source_by_feature.keys()]))
+    for feature in manifest_columns:
+        series = df[feature] if feature in df else pd.Series(index=df.index, dtype=float)
+        valid = series.replace([np.inf, -np.inf], np.nan).dropna()
+        leakage = guard.check_no_future_columns([feature])
+        source = source_by_feature.get(
+            feature,
+            "legacy_factor" if feature in FACTOR_FEATURE_COLUMNS else "legacy_base",
+        )
+        rows.append(
+            {
+                "feature": feature,
+                "source_block": source,
+                "enabled": feature in df,
+                "missing_ratio": float(series.isna().mean()) if len(series) else 1.0,
+                "start_date": "" if valid.empty else valid.index.min().date().isoformat(),
+                "end_date": "" if valid.empty else valid.index.max().date().isoformat(),
+                "leakage_status": leakage.status,
+                "used_in_hmm": feature in hmm_columns,
+            }
+        )
+    return pd.DataFrame(rows)
