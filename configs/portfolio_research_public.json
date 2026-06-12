@@ -1,0 +1,22 @@
+{
+  "ticker": "SYNTH",
+  "benchmark": "QQQ",
+  "data_provider": "synthetic",
+  "synthetic_periods": 560,
+  "portfolio_enabled": true,
+  "portfolio_mode": "top_k",
+  "portfolio_symbols": ["SYNTH", "OTHER", "THIRD"],
+  "portfolio_benchmark": "QQQ",
+  "portfolio_max_positions": 2,
+  "portfolio_weighting_method": "score_vol_inverse",
+  "portfolio_cash_buffer": 0.10,
+  "enable_research_public_features": true,
+  "research_public_feature_set": ["factor_ranks", "market_residual", "instability"],
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 15,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_stress_tests": false,
+  "enable_experiment_tracking": false
+}

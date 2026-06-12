@@ -1,0 +1,21 @@
+{
+  "ticker": "SYNTH",
+  "benchmark": "SYNB",
+  "data_provider": "synthetic",
+  "synthetic_periods": 520,
+  "enable_alt_data_features": true,
+  "enable_glassdoor_features": true,
+  "enable_wsb_features": true,
+  "enable_valuation_features": true,
+  "use_alt_data_position_overlay": true,
+  "glassdoor_reviews_path": "tests/fixtures/glassdoor_reviews_sample.csv",
+  "wsb_mentions_path": "tests/fixtures/wsb_mentions_sample.csv",
+  "valuation_data_path": "tests/fixtures/valuation_sample.csv",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 20,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_stress_tests": false,
+  "enable_experiment_tracking": false
+}

@@ -1,0 +1,14 @@
+{
+  "ticker": "NVDA",
+  "benchmark": "QQQ",
+  "data_provider": "openbb",
+  "feature_groups_enabled": ["price_core", "volatility_core", "options"],
+  "optional_feature_groups": ["options"],
+  "train_window": 252,
+  "retrain_frequency": 63,
+  "n_iter": 25,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_stress_tests": false,
+  "enable_experiment_tracking": false
+}

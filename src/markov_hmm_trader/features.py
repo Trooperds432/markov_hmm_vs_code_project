@@ -6,6 +6,7 @@ import pandas as pd
 from .config import PipelineConfig
 from .data_providers.factory import get_data_provider
 from .feature_blocks.runner import build_configured_feature_groups
+from .feature_quality import apply_feature_quality, feature_quality_report, hmm_feature_columns
 from .leakage import FeatureLeakageGuard
 from .warnings import normalize_warning_frame
 
@@ -265,7 +266,24 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
             "feature_group_skipped": [warning],
         }
 
-    required_columns = feature_columns(cfg) + [
+    requested_hmm_features = feature_columns(cfg)
+    quality_result = None
+    if cfg.feature_quality_enabled:
+        metadata_holder = pd.DataFrame()
+        metadata_holder.attrs.update(feature_group_attrs)
+        quality_result = apply_feature_quality(
+            out,
+            cfg,
+            requested_hmm_features,
+            feature_group_metadata(metadata_holder),
+        )
+        out = quality_result.frame
+        selected_hmm_features = quality_result.hmm_features
+    else:
+        out.attrs["hmm_feature_columns"] = requested_hmm_features
+        selected_hmm_features = requested_hmm_features
+
+    required_columns = selected_hmm_features + [
         "ret_1",
         "rv_realised",
         "trend_long",
@@ -283,6 +301,12 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
         )
     clean = out.replace([np.inf, -np.inf], np.nan).dropna(subset=required_columns).copy()
     clean.attrs.update(feature_group_attrs)
+    clean.attrs["hmm_feature_columns"] = selected_hmm_features
+    clean.attrs["rows_before_feature_drop"] = int(len(out))
+    clean.attrs["rows_after_feature_drop"] = int(len(clean))
+    if quality_result is not None:
+        clean.attrs["feature_quality_report"] = quality_result.quality_report.to_dict("records")
+        clean.attrs["feature_drop_report"] = quality_result.drop_report.to_dict("records")
     return clean
 
 
@@ -353,7 +377,10 @@ def all_feature_warnings(df: pd.DataFrame) -> pd.DataFrame:
 def feature_manifest(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     metadata = feature_group_metadata(df)
     guard = FeatureLeakageGuard()
-    hmm_columns = set(feature_columns(cfg))
+    requested_hmm_columns = set(feature_columns(cfg))
+    hmm_columns = set(hmm_feature_columns(df, cfg, feature_columns(cfg)))
+    quality = feature_quality_report(df)
+    quality_by_feature = quality.set_index("feature").to_dict("index") if not quality.empty else {}
     rows = []
     source_by_feature = {row.feature: row.feature_group for row in metadata.itertuples(index=False)}
     manifest_columns = list(dict.fromkeys([*feature_columns(cfg), *source_by_feature.keys()]))
@@ -361,6 +388,9 @@ def feature_manifest(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
         series = df[feature] if feature in df else pd.Series(index=df.index, dtype=float)
         valid = series.replace([np.inf, -np.inf], np.nan).dropna()
         leakage = guard.check_no_future_columns([feature])
+        quality_row = quality_by_feature.get(feature, {})
+        safe_for_hmm = bool(quality_row.get("safe_for_hmm", leakage.status == "pass"))
+        validation_only = bool(quality_row.get("validation_only", leakage.status != "pass"))
         source = source_by_feature.get(
             feature,
             "legacy_factor" if feature in FACTOR_FEATURE_COLUMNS else "legacy_base",
@@ -375,6 +405,21 @@ def feature_manifest(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
                 "end_date": "" if valid.empty else valid.index.max().date().isoformat(),
                 "leakage_status": leakage.status,
                 "used_in_hmm": feature in hmm_columns,
+                "used_in_overlay": source
+                in {
+                    "alt_data_overlays",
+                    "glassdoor_sentiment",
+                    "wsb_attention",
+                    "valuation_anchor",
+                },
+                "validation_only": validation_only,
+                "safe_for_hmm": safe_for_hmm,
+                "quality_status": quality_row.get(
+                    "quality_status",
+                    "used" if feature in hmm_columns else "not_requested",
+                ),
+                "drop_reason": quality_row.get("drop_reason", ""),
+                "used_in_hmm_requested": feature in requested_hmm_columns,
             }
         )
     return pd.DataFrame(rows)

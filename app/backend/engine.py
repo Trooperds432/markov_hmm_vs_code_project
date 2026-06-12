@@ -95,9 +95,7 @@ def build_config(req: RunRequest):
         raise ConfigError(str(exc)) from exc
 
     overrides = {
-        field: getattr(req, field)
-        for field in _OVERRIDE_FIELDS
-        if getattr(req, field) is not None
+        field: getattr(req, field) for field in _OVERRIDE_FIELDS if getattr(req, field) is not None
     }
     cfg = apply_overrides(cfg, **overrides)
     if req.quick:

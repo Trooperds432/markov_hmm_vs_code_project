@@ -20,6 +20,7 @@ from .diagnostics import (
     make_window_diagnostic_row,
 )
 from .ensemble import add_ensemble_signals
+from .feature_quality import hmm_feature_columns
 from .features import feature_columns
 from .hmm_model import fit_hmm_best_of_seeds, semantic_probabilities
 from .nn_model import add_nn_confirmation
@@ -171,7 +172,7 @@ def _add_statistical_confidence_columns(df: pd.DataFrame, cfg: PipelineConfig) -
 
 
 def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResult:
-    features = feature_columns(cfg)
+    features = hmm_feature_columns(df, cfg, feature_columns(cfg))
     df = df.copy()
     window_rows = []
     seed_rows = []

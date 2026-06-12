@@ -10,11 +10,13 @@ from .backtest import walk_forward_backtest
 from .baselines import baseline_comparison, write_baseline_comparison
 from .config import PipelineConfig
 from .doctor import write_doctor_reports
+from .feature_quality import feature_drop_report, feature_quality_report
 from .features import all_feature_warnings, feature_manifest, make_features
 from .metrics import add_backtest_metric_columns, make_report
 from .model_audit import build_model_selection_candidates, write_model_selection_candidates
 from .output_contracts import assert_contract_results, validate_output_directory
 from .reproducibility import set_global_seed, write_experiment_metadata
+from .run_reporting import write_run_audit_outputs
 from .splits import build_split_registry, write_split_registry
 
 
@@ -105,6 +107,8 @@ def run_ci_smoke(
         output_dir / "stats.csv", index=False
     )
     feature_manifest(features, smoke_cfg).to_csv(output_dir / "feature_manifest.csv", index=False)
+    feature_quality_report(features).to_csv(output_dir / "feature_quality_report.csv", index=False)
+    feature_drop_report(features).to_csv(output_dir / "feature_drop_report.csv", index=False)
     all_feature_warnings(features).to_csv(output_dir / "warnings.csv", index=False)
 
     split_registry = build_split_registry(
@@ -129,6 +133,16 @@ def run_ci_smoke(
     )
     write_baseline_comparison(baselines, diagnostics_dir / "baseline_comparison.csv")
     write_experiment_metadata(diagnostics_dir / "experiment_metadata.json", smoke_cfg)
+    write_run_audit_outputs(
+        smoke_cfg,
+        output_dir,
+        mode="ci_smoke",
+        raw_rows=len(raw),
+        feature_rows=len(features),
+        backtest_rows=len(backtest),
+        first_date="" if backtest.empty else str(backtest.index.min().date()),
+        last_date="" if backtest.empty else str(backtest.index.max().date()),
+    )
 
     contract_results = validate_output_directory(output_dir, mode="ci_smoke")
     assert_contract_results(contract_results)

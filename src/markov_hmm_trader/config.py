@@ -40,6 +40,11 @@ class PipelineConfig:
     max_feature_missing_ratio: float = 0.30
     feature_winsorize_limits: tuple[float, float] = (0.01, 0.99)
     use_processor_pipeline: bool = True
+    feature_quality_enabled: bool = True
+    feature_corr_warn_threshold: float = 0.95
+    feature_corr_drop_threshold: float | None = None
+    drop_high_missing_features: bool = True
+    drop_zero_variance_features: bool = True
     enable_research_public_features: bool = False
     research_public_feature_set: tuple[str, ...] = (
         "stationarity",
@@ -149,6 +154,10 @@ class PipelineConfig:
     enable_random_baseline: bool = False
     random_baseline_paths: int = 1000
     random_baseline_seed: int = 42
+    random_baseline_match_exposure: bool = True
+    random_baseline_match_turnover: bool = True
+    random_baseline_match_rebalance_dates: bool = True
+    random_baseline_match_long_only: bool = True
 
     # HMM
     n_states: int = 3
@@ -378,6 +387,16 @@ class PipelineConfig:
     portfolio_rebalance_frequency: str = "monthly"
     portfolio_weighting_method: str = "inverse_vol"
     portfolio_sector_cap: float = 0.50
+    portfolio_min_rebalance_change: float = 0.03
+    portfolio_max_turnover_per_rebalance: float = 0.35
+    portfolio_use_correlation_penalty: bool = True
+    portfolio_corr_window: int = 60
+    portfolio_max_pairwise_corr: float = 0.85
+    portfolio_sector_map_path: str = ""
+    portfolio_use_score_decay: bool = True
+    portfolio_score_decay_halflife_days: int = 21
+    portfolio_allow_new_position_threshold: float = 0.10
+    portfolio_exit_score_threshold: float = -0.05
 
     # Experiment tracking
     enable_experiment_tracking: bool = True
@@ -402,6 +421,12 @@ class PipelineConfig:
     paper_max_portfolio_leverage: float = 1.0
     paper_min_model_confidence: float = 0.55
     paper_max_data_staleness_days: int = 5
+    paper_state_path: str = "paper_account_state.json"
+    paper_trade_ledger_path: str = "paper_trade_ledger.csv"
+    paper_reset_state: bool = False
+    paper_allow_fractional_shares: bool = True
+    paper_min_trade_notional: float = 25.0
+    paper_rebalance_threshold: float = 0.02
 
 
 def load_config(path: str | Path) -> PipelineConfig:

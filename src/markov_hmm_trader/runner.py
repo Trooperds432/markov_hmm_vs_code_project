@@ -20,6 +20,7 @@ from .diagnostics import summarize_states
 from .ensemble import ensemble_diagnostics
 from .experiment import finalize_experiment_run, start_experiment_run
 from .factor_validation import factor_rank_diagnostics, long_short_spread_diagnostics
+from .feature_quality import feature_drop_report, feature_quality_report
 from .features import (
     all_feature_warnings,
     feature_group_metadata,
@@ -46,7 +47,12 @@ from .nn_model import (
 )
 from .observable_markov import run_observable_markov
 from .plots import save_plots
-from .random_baselines import run_random_timing_baseline, summarize_random_baseline
+from .random_baselines import (
+    run_matched_random_baselines,
+    run_random_timing_baseline,
+    summarize_random_baseline,
+)
+from .run_reporting import write_run_audit_outputs
 from .stress import (
     make_asset_bootstrap_stress,
     make_cost_slippage_stress,
@@ -90,9 +96,11 @@ def run_single(
 
     print(f"Loading data for {cfg.ticker} vs {cfg.benchmark}...")
     raw = load_market_data(run_cfg)
+    raw_rows = len(raw)
 
     print("Building features...")
     features = make_features(raw, run_cfg)
+    feature_rows = len(features)
 
     print("Running walk-forward HMM backtest...")
     result = walk_forward_backtest(features, run_cfg)
@@ -107,6 +115,8 @@ def run_single(
         output_dir / "stats.csv", index=False
     )
     feature_manifest(features, run_cfg).to_csv(output_dir / "feature_manifest.csv", index=False)
+    feature_quality_report(features).to_csv(output_dir / "feature_quality_report.csv", index=False)
+    feature_drop_report(features).to_csv(output_dir / "feature_drop_report.csv", index=False)
     _combined_warnings(raw, features).to_csv(output_dir / "warnings.csv", index=False)
 
     if diagnostics_enabled:
@@ -270,6 +280,9 @@ def run_single(
     if run_cfg.enable_random_baseline:
         random_paths = run_random_timing_baseline(backtest, run_cfg)
         random_paths.to_csv(output_dir / "random_baseline_paths.csv", index=False)
+        matched_baselines = run_matched_random_baselines(backtest, run_cfg)
+        for name, frame in matched_baselines.items():
+            frame.to_csv(output_dir / f"{name}.csv", index=False)
         summarize_random_baseline(stats, random_paths, run_cfg).to_csv(
             output_dir / "random_baseline_summary.csv", index=False
         )
@@ -305,6 +318,17 @@ def run_single(
         print("Saving plots...")
         save_plots(backtest, run_cfg, output_dir)
 
+    write_run_audit_outputs(
+        run_cfg,
+        output_dir,
+        mode="paper" if run_cfg.enable_paper_trading else "research",
+        raw_rows=raw_rows,
+        feature_rows=feature_rows,
+        backtest_rows=len(backtest),
+        first_date="" if backtest.empty else str(backtest.index.min().date()),
+        last_date="" if backtest.empty else str(backtest.index.max().date()),
+    )
+
     selected_model = {}
     if not result.hmm_transition_matrices.empty:
         latest_model = result.hmm_transition_matrices.iloc[-1]
@@ -316,6 +340,16 @@ def run_single(
             ),
         }
     finalize_experiment_run(run_cfg, experiment_dir, output_dir, stats, selected_model)
+    write_run_audit_outputs(
+        run_cfg,
+        output_dir,
+        mode="paper" if run_cfg.enable_paper_trading else "research",
+        raw_rows=raw_rows,
+        feature_rows=feature_rows,
+        backtest_rows=len(backtest),
+        first_date="" if backtest.empty else str(backtest.index.min().date()),
+        last_date="" if backtest.empty else str(backtest.index.max().date()),
+    )
     return backtest, stats
 
 
@@ -363,6 +397,12 @@ def run_portfolio_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool =
     print("Running portfolio construction mode...")
     mode = "risk_budgeted" if cfg.portfolio_mode == "risk_budgeted" else "top_k"
     outputs = run_portfolio(replace(cfg, portfolio_enabled=True, portfolio_mode=mode), output_dir)
+    write_run_audit_outputs(
+        replace(cfg, portfolio_enabled=True, portfolio_mode=mode),
+        output_dir,
+        mode="portfolio",
+        backtest_rows=len(outputs.get("portfolio_equity_curve", pd.DataFrame())),
+    )
     stats = outputs["portfolio_stats"]
     if isinstance(stats, pd.Series):
         print(stats.to_string())
@@ -399,8 +439,16 @@ def run_paper_mode(cfg: PipelineConfig, output_dir: Path, make_plots: bool = Fal
     paper_cfg = replace(cfg, enable_paper_trading=True, enable_stress_tests=False)
     backtest, _ = run_single(paper_cfg, output_dir, make_plots=make_plots, write_stress=False)
     output_dir.mkdir(parents=True, exist_ok=True)
-    outputs = run_paper_simulation(paper_cfg, backtest)
+    outputs = run_paper_simulation(paper_cfg, backtest, output_dir=output_dir)
     for name, frame in outputs.items():
         frame.to_csv(output_dir / f"{name}.csv", index=False)
+    write_run_audit_outputs(
+        paper_cfg,
+        output_dir,
+        mode="paper",
+        backtest_rows=len(backtest),
+        first_date="" if backtest.empty else str(backtest.index.min().date()),
+        last_date="" if backtest.empty else str(backtest.index.max().date()),
+    )
     if not outputs["paper_risk_checks"]["passed"].all():
         print("Paper trading blocked by risk checks or unapproved model registry entry.")

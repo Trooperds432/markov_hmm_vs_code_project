@@ -1,0 +1,21 @@
+{
+  "ticker": "SYNTH",
+  "benchmark": "SYNB",
+  "data_provider": "synthetic",
+  "synthetic_periods": 520,
+  "enable_paper_trading": true,
+  "paper_initial_cash": 100000.0,
+  "paper_model_registry_required": false,
+  "paper_max_position_weight": 0.20,
+  "paper_max_portfolio_leverage": 0.50,
+  "paper_min_model_confidence": 0.40,
+  "paper_min_trade_notional": 25.0,
+  "paper_rebalance_threshold": 0.01,
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 15,
+  "random_seeds": [7],
+  "covariance_type": "diag",
+  "enable_stress_tests": false,
+  "enable_experiment_tracking": false
+}
