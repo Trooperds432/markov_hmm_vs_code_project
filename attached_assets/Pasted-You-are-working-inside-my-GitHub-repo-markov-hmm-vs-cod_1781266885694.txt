@@ -1,0 +1,837 @@
+You are working inside my GitHub repo: markov_hmm_vs_code_project.
+
+Goal:
+Convert my existing Python HMM / neural-network quant research repo into a ready-made web application with an institutional, Bloomberg-like quant terminal experience. The app should be accessible through Replit and should provide a professional UI for running backtests, viewing model diagnostics, comparing strategies, inspecting HMM regimes, inspecting NN confirmation signals, checking stress tests, viewing portfolio outputs, and running paper-trading simulations.
+
+Important product framing:
+This is not a live trading system, not financial advice, and not a guaranteed-profit bot. The repo should be presented as an institutional quant research terminal / AI regime research terminal for research and educational use. Paper trading must remain simulation-only. Do not add live broker execution.
+
+Core app direction:
+Build a full React + FastAPI web app that becomes the main user interface for the repo, while preserving the existing CLI underneath. The CLI should still work, but the app should provide a polished UI that lets the user run backtests, stream progress/status, and inspect outputs visually.
+
+The dashboard should include:
+- Top nav with tabs for Dashboard, Backtests, Portfolio, Paper Trading, and Settings.
+- KPI cards for Sharpe ratio, total return, max drawdown, and win rate.
+- Regime Detector chart:
+  - price chart with Bull / Bear / Sideways regime bands overlaid
+  - HMM state probability area chart below
+- Run Backtest panel:
+  - ticker input
+  - date range selector
+  - profile selector
+  - HMM states selector
+  - toggles for walk-forward and stress tests
+  - Run button
+- Recent Backtests table:
+  - ticker
+  - date range
+  - profile
+  - status badge
+  - Sharpe
+  - return
+  - drawdown
+  - created time
+  - open/view action
+
+The final app should include:
+- a React + FastAPI web app replacing the CLI as the normal user-facing interface
+- a real backend that actually runs the existing Python backtests
+- streaming or polling of run progress/results
+- live charts rendered from real backtest output
+- all controls wired up to the Python engine
+- a polished institutional dark terminal UI
+
+Current repo state:
+The repo already has a CLI-based quant research engine.
+
+main.py supports:
+- default single-symbol research runs
+- --config
+- --output-dir
+- --no-plots / --plots
+- --no-diagnostics
+- --no-stress
+- --universe
+- --profile
+- --ticker
+- --benchmark
+- --start
+- --end
+- --quick
+- --nested
+- --portfolio
+- --compare-models
+- --paper
+- --mode research / backtest / paper / diagnostics / ci_smoke
+- --doctor
+- --check-deps
+
+Do not break existing main.py behaviour. The web app should call the existing CLI or existing internal Python modules safely.
+
+Existing output files that the app should read and visualise:
+- equity_curve.csv
+- stats.csv
+- equity_plot.png
+- regime_probabilities.png
+- position_exposure.png
+- window_diagnostics.csv
+- seed_diagnostics.csv
+- state_summary.csv
+- hmm_model_selection.csv
+- hmm_emissions.csv
+- hmm_transition_matrices.csv
+- hmm_state_stability.csv
+- hmm_stationary_distribution.csv
+- hmm_decode_comparison.csv
+- hmm_component_diagnostics.csv
+- hmm_synthetic_sample_stress.csv
+- factor_data_coverage.csv
+- feature_summary.csv
+- data_provider_metadata.csv
+- data_provider_warnings.csv
+- feature_group_metadata.csv
+- feature_group_warnings.csv
+- observable_markov_baseline.csv
+- observable_markov_stationary_distribution.csv
+- nn_predictions.csv
+- nn_forecasts.csv
+- nn_oos_split_info.csv
+- nn_training_metrics.csv
+- ensemble_diagnostics.csv
+- ensemble_predictions.csv
+- volatility_forecasts.csv
+- model_overfit_report.csv
+- stress_tests.csv
+- asset_bootstrap_stress.csv
+- cost_slippage_stress.csv
+- missing_data_stress.csv
+- crisis_window_stress.csv
+- portfolio_equity_curve.csv
+- portfolio_weights.csv
+- portfolio_trades.csv
+- portfolio_stats.csv
+- portfolio_asset_signals.csv
+- paper_orders.csv
+- paper_positions.csv
+- paper_daily_equity.csv
+- paper_equity.csv
+- paper_risk_checks.csv
+- experiment run snapshots under experiments/runs/
+
+Architecture:
+Build a Replit-compatible full-stack app.
+
+Backend:
+- Python
+- FastAPI
+- Uvicorn
+- Pandas
+- Pydantic
+- existing repo modules
+- background job execution for long-running research jobs
+- subprocess-based CLI runner first, direct Python integration later if safe
+
+Frontend:
+- React
+- Vite
+- TypeScript
+- TailwindCSS
+- Recharts or Plotly.js
+- TanStack Table or equivalent
+- dark institutional terminal UI
+
+Do not use Streamlit unless absolutely necessary. This should feel like a proper app, not a notebook dashboard.
+
+Suggested project structure:
+
+app/
+  backend/
+    main.py
+    api/
+      routes_runs.py
+      routes_outputs.py
+      routes_configs.py
+      routes_market.py
+      routes_portfolio.py
+      routes_paper.py
+      routes_health.py
+    services/
+      pipeline_runner.py
+      output_loader.py
+      config_builder.py
+      run_registry.py
+      csv_summarizer.py
+      terminal_commands.py
+    schemas.py
+    settings.py
+  frontend/
+    package.json
+    index.html
+    src/
+      main.tsx
+      App.tsx
+      api/client.ts
+      pages/
+        Dashboard.tsx
+        Backtests.tsx
+        Portfolio.tsx
+        PaperTrading.tsx
+        Settings.tsx
+        Terminal.tsx
+        SecurityAnalysis.tsx
+        ResearchLab.tsx
+        ModelDiagnostics.tsx
+        NeuralNetwork.tsx
+        StressTests.tsx
+        Experiments.tsx
+      components/
+        TopNav.tsx
+        Sidebar.tsx
+        CommandPalette.tsx
+        MetricCard.tsx
+        EquityCurveChart.tsx
+        PriceRegimeChart.tsx
+        RegimeProbabilityAreaChart.tsx
+        DrawdownChart.tsx
+        StateTimeline.tsx
+        DiagnosticsTable.tsx
+        Heatmap.tsx
+        RunBacktestPanel.tsx
+        RecentBacktestsTable.tsx
+        RunStatusBadge.tsx
+        RunStatusPanel.tsx
+        TerminalLog.tsx
+        FilePreviewTable.tsx
+  shared/
+  README_APP.md
+  requirements-app.txt
+
+Backend requirements:
+
+1. Create FastAPI backend endpoints that can:
+- list available configs from configs/
+- create temporary app configs from UI form input
+- run existing main.py commands in the background
+- poll or stream job status
+- store each app run in outputs/app_runs/<run_id>/
+- read output CSVs from selected runs
+- return clean JSON summaries to the frontend
+- expose safe raw CSV downloads
+
+2. Add a run registry:
+Store metadata for every app-triggered run:
+- run_id
+- ticker
+- benchmark
+- mode
+- profile
+- config path
+- output directory
+- start date
+- end date
+- start time
+- end time
+- status: queued / running / completed / failed
+- command executed
+- error message if failed
+- key metrics from stats.csv if available:
+  - Sharpe
+  - total return
+  - max drawdown
+  - win rate
+  - CAGR
+  - Sortino
+  - Calmar
+  - average exposure
+  - turnover
+
+Save the registry as:
+outputs/app_runs/run_registry.json
+
+3. Use background jobs:
+Do not run heavy HMM/NN backtests directly inside HTTP requests.
+Use ThreadPoolExecutor, background tasks, or a lightweight worker.
+POST /api/runs should return a run_id immediately.
+The frontend should poll:
+GET /api/runs/{run_id}/status
+GET /api/runs/{run_id}/logs
+
+4. Use existing CLI as the first integration layer:
+Use subprocess safely, for example:
+
+python main.py --config <config_path> --output-dir outputs/app_runs/<run_id> --no-plots
+
+Map UI options to CLI flags:
+- ticker → --ticker
+- benchmark → --benchmark
+- start/end date → --start / --end
+- profile → --profile
+- quick toggle → --quick
+- diagnostics toggle → --no-diagnostics when disabled
+- stress tests toggle → --no-stress when disabled
+- portfolio mode → --portfolio
+- paper mode → --paper
+- model comparison → --compare-models
+- diagnostics mode → --mode diagnostics
+
+5. Add health endpoints:
+- GET /api/health
+- GET /api/dependencies
+
+/api/dependencies should call or reuse:
+python main.py --check-deps
+
+6. Add run/output endpoints:
+- GET /api/runs
+- POST /api/runs
+- GET /api/runs/{run_id}
+- GET /api/runs/{run_id}/status
+- GET /api/runs/{run_id}/logs
+- GET /api/runs/{run_id}/stats
+- GET /api/runs/{run_id}/equity-curve
+- GET /api/runs/{run_id}/regime-probabilities
+- GET /api/runs/{run_id}/price-regime-chart-data
+- GET /api/runs/{run_id}/diagnostics/{file_name}
+- GET /api/runs/{run_id}/download/{file_name}
+
+7. Add config endpoints:
+- GET /api/configs
+- GET /api/configs/{name}
+- POST /api/configs/validate
+- POST /api/configs/create
+
+The UI should allow creating configs for:
+- ticker
+- benchmark
+- start date
+- end date
+- profile
+- train window
+- retrain frequency
+- HMM state count
+- covariance type
+- commission bps
+- slippage bps
+- diagnostics on/off
+- stress tests on/off
+- walk-forward on/off
+- NN confirmation on/off
+- ensemble mode
+- portfolio symbols
+- quick mode
+
+Frontend requirements:
+
+Overall layout:
+- Top nav with tabs:
+  Dashboard
+  Backtests
+  Portfolio
+  Paper Trading
+  Settings
+- Optional left sidebar for deeper modules:
+  Terminal
+  Security Analysis
+  HMM Regime Lab
+  Neural Network
+  Stress Tests
+  Experiments
+- Top command/search bar with ticker input
+- Dark terminal theme
+- High-density professional panels
+- Compact tables
+- Green/red/amber status colors
+- No meme styling
+- No cartoon UI
+- No exaggerated AI branding
+- Do not copy Bloomberg branding, logos, fonts, exact layout, or proprietary styling
+
+Main pages:
+
+1. Dashboard
+
+Purpose:
+Overview of latest run and system state.
+
+Must include:
+- Top nav
+- KPI cards:
+  - Sharpe ratio
+  - total return
+  - max drawdown
+  - win rate
+- latest ticker
+- latest strategy total return
+- buy-and-hold total return
+- strategy CAGR
+- Sortino
+- Calmar
+- average exposure
+- turnover
+- current regime
+- current HMM bull/bear/sideways probabilities
+- latest NN probability if available
+- latest ensemble signal if available
+- latest target position
+- dependency health
+- most recent run status
+
+Charts:
+- strategy vs buy-hold equity curve
+- drawdown chart
+- Regime Detector chart:
+  - price chart with Bull/Bear/Sideways regime bands overlaid
+  - HMM state probability area chart below
+- rolling Sharpe mini chart if available
+
+Dashboard panels:
+- Run Backtest panel
+- Recent Backtests table
+
+2. Backtests Page
+
+Purpose:
+Run and review research/backtests.
+
+Must include:
+Run Backtest panel with:
+- ticker input
+- benchmark input
+- date range selector
+- profile selector
+- HMM states selector
+- covariance type selector
+- commission bps
+- slippage bps
+- toggles for:
+  - quick mode
+  - walk-forward
+  - diagnostics
+  - stress tests
+  - NN confirmation
+  - plots
+- ensemble mode selector
+- Run button
+
+Recent Backtests table:
+- run id
+- ticker
+- benchmark
+- profile
+- date range
+- status badge
+- Sharpe
+- total return
+- max drawdown
+- win rate
+- created time
+- action: open, download, rerun
+
+When Run is clicked:
+- POST /api/runs
+- show queued/running status badge
+- poll run status
+- stream logs if possible
+- when complete, load stats/equity/regime charts
+
+3. Terminal / Command Center
+
+Purpose:
+Give the app a command workflow.
+
+Support commands:
+RUN NVDA
+RUN NVDA BENCH QQQ START 2012-01-01
+QUICK TSLA
+BACKTEST AAPL
+PORTFOLIO
+PAPER NVDA
+DIAG
+OPEN STATS
+OPEN NN
+OPEN HMM
+COMPARE MODELS
+STRESS
+UNIVERSE
+
+The command parser should convert these into API calls or navigation actions.
+
+4. Security Analysis Page
+
+Purpose:
+Deep-dive page for one ticker/run.
+
+Include:
+- ticker/run selector
+- price chart if Close data exists
+- strategy equity vs buy-hold
+- regime detector price chart with Bull/Bear/Sideways bands
+- HMM probability area chart
+- hidden state timeline
+- decoded_state_viterbi vs decoded_state_map disagreement indicator
+- current bull, bear, sideways probabilities
+- alpha_score_long
+- trend_long / rs_long status
+- ensemble_signal
+- target_position
+- latest strategy return
+- latest volatility / rv_realised if available
+
+5. HMM Regime Lab
+
+Purpose:
+Model diagnostics for the Hidden Markov Model.
+
+Read:
+- window_diagnostics.csv
+- seed_diagnostics.csv
+- state_summary.csv
+- hmm_model_selection.csv
+- hmm_emissions.csv
+- hmm_transition_matrices.csv
+- hmm_state_stability.csv
+- hmm_stationary_distribution.csv
+- hmm_decode_comparison.csv
+- hmm_component_diagnostics.csv
+
+UI:
+- HMM model selection table
+- transition matrix heatmap
+- state emission table
+- state occupancy chart
+- dwell time chart
+- state stability warnings
+- Viterbi vs MAP disagreement table
+- selected model summary
+- regime classification summary
+
+6. Neural Network Page
+
+Purpose:
+Inspect optional NN confirmation layer.
+
+Read:
+- nn_predictions.csv
+- nn_forecasts.csv
+- nn_oos_split_info.csv
+- nn_training_metrics.csv
+- ensemble_diagnostics.csv
+- model_overfit_report.csv
+
+UI:
+- NN probability over time
+- adjusted probability over time
+- NN confidence over time
+- uncertainty / MC dropout std over time
+- target vs prediction table
+- training vs validation loss chart if available
+- OOS split metadata table
+- overfit warnings table
+- HMM/NN agreement matrix
+- explanation of ensemble modes:
+  - hmm_only
+  - nn_only
+  - hmm_and_nn_agree
+  - weighted_blend
+  - multi_signal
+
+The NN page must handle NN-disabled runs gracefully.
+
+7. Portfolio Page
+
+Purpose:
+Use existing portfolio mode.
+
+Read:
+- portfolio_equity_curve.csv
+- portfolio_weights.csv
+- portfolio_trades.csv
+- portfolio_stats.csv
+- portfolio_asset_signals.csv
+
+UI:
+- portfolio equity curve
+- weight allocation stacked chart
+- latest weights table
+- trades / turnover table
+- portfolio stats cards
+- asset signal ranking
+- concentration chart
+- holdings chart
+
+8. Paper Trading Page
+
+Purpose:
+Visualise paper-mode outputs.
+
+Important:
+Simulation only. No live orders.
+
+Read:
+- paper_orders.csv
+- paper_positions.csv
+- paper_daily_equity.csv
+- paper_equity.csv
+- paper_risk_checks.csv
+- paper_order_status.csv if available
+
+UI:
+- clear warning: “Simulation only — no live orders are sent.”
+- latest paper order
+- target weight
+- risk checks pass/fail
+- paper equity chart
+- positions table
+- blocked orders and reasons
+
+9. Stress Tests Page
+
+Purpose:
+Risk robustness.
+
+Read:
+- stress_tests.csv
+- asset_bootstrap_stress.csv
+- cost_slippage_stress.csv
+- missing_data_stress.csv
+- crisis_window_stress.csv
+
+UI:
+- stress scenario table
+- cost/slippage grid
+- crisis-window performance
+- bootstrap distribution chart
+- missing-data sensitivity chart
+- pass/warn/fail labels
+
+10. Experiments Page
+
+Purpose:
+Track model runs.
+
+Read:
+- experiments/runs/
+- experiments/registry/model_registry.csv
+- outputs/app_runs/run_registry.json
+
+UI:
+- run history table
+- compare selected runs
+- config snapshot
+- environment info
+- selected model metadata
+- key metrics side-by-side
+
+11. Settings Page
+
+Purpose:
+App and model settings.
+
+Include:
+- data provider selection
+- cache directory
+- default output directory
+- default config
+- default benchmark
+- dependency status
+- warning if torch/optuna missing and NN is enabled
+- run doctor button
+- app password status
+- safe data cleanup controls for app_runs only
+
+Data/chart handling:
+
+Create robust CSV loaders:
+- Missing optional files must not crash the app.
+- If a file is missing, return empty data and a clear reason.
+- Do not assume NN files exist unless NN is enabled.
+- Do not assume portfolio files exist unless portfolio mode was run.
+- Do not assume paper files exist unless paper mode was run.
+- Detect columns dynamically.
+
+For equity_curve.csv, detect:
+- Date/date/index column
+- strategy_equity
+- buy_hold_equity
+- strategy_ret
+- ret_1
+- position
+- target_position
+- rolling_sharpe_63
+- rolling_sharpe_252
+- rolling_drawdown_252
+- Bull probability columns
+- Bear probability columns
+- Sideways probability columns
+- hidden_state
+- decoded_state_viterbi
+- decoded_state_map
+- state_decode_disagreement
+- ensemble_signal
+- nn_probability or similar NN columns
+- Close/close/price if present
+
+Regime Detector implementation:
+Use equity_curve.csv and/or regime probability output.
+Display:
+- price or equity line
+- background bands by regime:
+  - Bull = green tinted band
+  - Bear = red tinted band
+  - Sideways = amber/grey tinted band
+- HMM state probability area chart below:
+  - Bull probability
+  - Bear probability
+  - Sideways probability
+If regime labels are not directly present, infer from available state probability columns or hidden_state mapping where possible. If not possible, show a clear “regime labels unavailable for this run” message.
+
+KPI card implementation:
+Stats should come from stats.csv where possible.
+At minimum show:
+- Sharpe ratio
+- total return
+- max drawdown
+- win rate
+If win rate is not available, compute it from completed trades if available, or show “N/A” rather than crashing.
+
+Security:
+Because this is accessible through Replit:
+- Add simple app password using APP_PASSWORD env var.
+- If APP_PASSWORD is set, require it before using the app.
+- Never expose local secrets.
+- Never expose arbitrary file paths.
+- Download endpoints must only allow files inside approved output directories.
+- Do not allow arbitrary shell commands.
+- Only allow backend to run approved main.py modes/flags.
+- No live broker order execution.
+- Paper mode remains simulation-only.
+
+Replit requirements:
+Make the app easy to run on Replit.
+
+Add/update:
+- requirements-app.txt
+- frontend package.json
+- README_APP.md
+- Replit start command or script
+
+Recommended backend command:
+pip install -r requirements.txt
+pip install -r requirements-ml.txt
+pip install -r requirements-app.txt
+uvicorn app.backend.main:app --host 0.0.0.0 --port 8000
+
+Recommended frontend command:
+cd app/frontend
+npm install
+npm run dev -- --host 0.0.0.0
+
+Where possible, provide a single Replit-friendly start command that launches both frontend and backend.
+
+Suggested app dependencies:
+
+requirements-app.txt:
+fastapi
+uvicorn[standard]
+pydantic
+python-multipart
+aiofiles
+pandas
+
+Frontend:
+react
+react-dom
+vite
+typescript
+tailwindcss
+recharts
+lucide-react
+@tanstack/react-table
+
+Implementation phases:
+
+Phase 1:
+Build backend API around existing CLI.
+Add background job runner.
+Add run registry.
+Add output CSV loaders.
+Add health/dependency endpoints.
+
+Phase 2:
+Build frontend shell:
+Top nav, dashboard layout, terminal dark UI, run status badges, metric cards.
+
+Phase 3:
+Build Dashboard and Backtests:
+KPI cards, Run Backtest panel, Recent Backtests table, equity curve chart, Regime Detector chart.
+
+Phase 4:
+Add deeper modules:
+Security Analysis, HMM Regime Lab, Neural Network page.
+
+Phase 5:
+Add Portfolio, Paper Trading, Stress Tests, Experiments, Settings.
+
+Phase 6:
+Add command palette:
+RUN NVDA
+QUICK NVDA
+PAPER NVDA
+PORTFOLIO
+OPEN STATS
+OPEN HMM
+OPEN NN
+
+Phase 7:
+Add app security, README_APP.md, Replit instructions, final polish.
+
+Acceptance criteria:
+
+The work is complete only if:
+
+1. Existing main.py CLI still works.
+2. The Replit app can start.
+3. The frontend has top nav tabs:
+   Dashboard, Backtests, Portfolio, Paper Trading, Settings.
+4. The Dashboard includes KPI cards for:
+   Sharpe ratio, total return, max drawdown, win rate.
+5. The Dashboard includes a Regime Detector chart:
+   price chart with Bull/Bear/Sideways bands overlaid and HMM state probability area chart below.
+6. The Dashboard or Backtests page includes a Run Backtest panel:
+   ticker, date range, profile selector, HMM states, walk-forward toggle, stress test toggle, Run button.
+7. The Dashboard or Backtests page includes a Recent Backtests table with status badges.
+8. The frontend can launch a real run through the backend.
+9. The backend creates a unique output directory for each run.
+10. The frontend can show queued/running/completed/failed status.
+11. The frontend can show logs or final errors.
+12. The app can read stats.csv and equity_curve.csv after a run.
+13. The app can render live charts from real backtest output.
+14. All controls are wired to the Python engine.
+15. Missing optional files do not crash the app.
+16. NN pages handle NN-enabled and NN-disabled runs.
+17. Portfolio page handles portfolio outputs.
+18. Paper Trading page clearly states simulation only.
+19. Stress page handles stress outputs.
+20. No arbitrary file access vulnerability exists.
+21. No arbitrary shell command execution exists.
+22. The app looks like a serious institutional quant terminal.
+23. The app does not claim profitability or give financial advice.
+24. README_APP.md explains setup, running, features, limitations, and safety warnings.
+25. The app is ready for research/demo use on Replit.
+
+Before coding:
+Inspect these files first:
+- main.py
+- README.md
+- configs/default.json
+- src/markov_hmm_trader/config.py
+- src/markov_hmm_trader/runner.py
+- src/markov_hmm_trader/backtest.py
+- src/markov_hmm_trader/nn_model.py
+- src/markov_hmm_trader/ensemble.py
+- src/markov_hmm_trader/portfolio.py
+- src/markov_hmm_trader/paper_trading.py
+- src/markov_hmm_trader/metrics.py
+- src/markov_hmm_trader/dependency_check.py
+
+Do not rewrite the quant engine. Build the professional web application around it.
