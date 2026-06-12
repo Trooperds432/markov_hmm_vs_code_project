@@ -194,6 +194,26 @@ def _metric_against_realised(
     return float(metric) if np.isfinite(metric) else np.nan
 
 
+def forecast_realised_error_metrics(
+    df: pd.DataFrame,
+    predictions: pd.DataFrame,
+    cfg: PipelineConfig,
+) -> tuple[float, float]:
+    realised = (
+        df["ret_1"].rolling(cfg.forecast_horizon_bars).sum().shift(-cfg.forecast_horizon_bars)
+    )
+    pred = predictions.copy()
+    pred.index = pd.to_datetime(pred["date"])
+    aligned = pred["forecast_mean"].groupby(level=0).last().reindex(df.index)
+    errors = (aligned - realised).abs().dropna()
+    if errors.empty:
+        return np.nan, np.nan
+    split = max(int(len(errors) * 0.7), 1)
+    validation = float(errors.iloc[:split].mean())
+    test = float(errors.iloc[split:].mean()) if len(errors) > split else np.nan
+    return validation, test
+
+
 def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, pd.DataFrame]:
     prediction_frames = []
     comparison_rows = []
@@ -220,12 +240,30 @@ def run_forecast_benchmarks(df: pd.DataFrame, cfg: PipelineConfig) -> dict[str, 
                 metric = _metric_against_realised(df, predictions, cfg)
 
         prediction_frames.append(predictions)
+        validation_mae, test_mae = forecast_realised_error_metrics(df, predictions, cfg)
+        predictions = predictions.copy()
+        predictions.index = pd.to_datetime(predictions["date"])
+        realised_forward = (
+            df["ret_1"]
+            .rolling(cfg.forecast_horizon_bars)
+            .sum()
+            .shift(-cfg.forecast_horizon_bars)
+            .reindex(predictions.index)
+        )
+        predictions["realised_forward_return"] = realised_forward.values
+        predictions["abs_error"] = (
+            predictions["forecast_mean"].astype(float) - predictions["realised_forward_return"]
+        ).abs()
+        predictions = predictions.reset_index(drop=True)
+        prediction_frames[-1] = predictions
         comparison_rows.append(
             {
                 "window_id": 0,
                 "model_name": normalized,
                 "cv_metric_name": "mae",
                 "cv_metric_value": metric,
+                "validation_mae": validation_mae,
+                "test_mae": test_mae,
                 "selected": False,
                 "error": error,
             }

@@ -12,6 +12,10 @@ from pathlib import Path
 import pandas as pd
 
 from .config import PipelineConfig, config_hash
+from .doctor import build_dependency_report
+from .model_audit import build_model_selection_candidates
+from .reproducibility import experiment_metadata
+from .warnings import normalize_warning_frame, warnings_to_json_records
 
 
 def _safe_name(value: str) -> str:
@@ -74,6 +78,8 @@ def finalize_experiment_run(
 
     if stats is not None:
         stats.to_frame("value").to_csv(run_dir / "stats.csv")
+        with (run_dir / "metrics.json").open("w", encoding="utf-8") as f:
+            json.dump(stats.to_dict(), f, indent=2, default=str)
 
     files = []
     for path in sorted(output_dir.glob("*")):
@@ -84,20 +90,67 @@ def finalize_experiment_run(
 
     with (run_dir / "output_files.json").open("w", encoding="utf-8") as f:
         json.dump(files, f, indent=2)
+    artifact_index = _artifact_index(output_dir)
+    with (run_dir / "artifacts_index.json").open("w", encoding="utf-8") as f:
+        json.dump(artifact_index, f, indent=2)
+    with (output_dir / "artifacts_index.json").open("w", encoding="utf-8") as f:
+        json.dump(artifact_index, f, indent=2)
+
+    dependency_report = build_dependency_report(output_dir=output_dir)
+    with (run_dir / "dependency_report.json").open("w", encoding="utf-8") as f:
+        json.dump(dependency_report, f, indent=2, default=str)
+
+    warnings_frame = (
+        pd.read_csv(output_dir / "warnings.csv")
+        if (output_dir / "warnings.csv").exists()
+        else normalize_warning_frame(None)
+    )
+    with (run_dir / "warnings.json").open("w", encoding="utf-8") as f:
+        json.dump(warnings_to_json_records(warnings_frame), f, indent=2, default=str)
+
+    if (output_dir / "hmm_model_selection.csv").exists():
+        model_selection = pd.read_csv(output_dir / "hmm_model_selection.csv")
+        candidates = build_model_selection_candidates(model_selection, cfg.ticker)
+        candidates.to_csv(run_dir / "model_selection_candidates.csv", index=False)
+        candidates.to_csv(output_dir / "model_selection_candidates.csv", index=False)
 
     manifest = {
         "run_id": run_dir.name,
         "config": asdict(cfg),
         "selected_models": selected_model or {},
         "file_inventory": files,
+        "artifact_count": len(artifact_index),
+        "warning_count": int(len(warnings_frame)),
+        "provider": cfg.data_provider,
+        "feature_groups_enabled": list(cfg.feature_groups_enabled),
+        "skipped_optional_groups": sorted(
+            set(warnings_frame.get("feature_group", pd.Series(dtype=str)).dropna())
+        ),
         "git_commit": git_commit_hash(),
     }
     with (run_dir / "experiment_manifest.json").open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, default=str)
     with (output_dir / "experiment_manifest.json").open("w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2, default=str)
+    with (output_dir / "experiment_metadata.json").open("w", encoding="utf-8") as f:
+        json.dump(experiment_metadata(cfg), f, indent=2, default=str)
 
     append_model_registry(cfg, run_dir, stats, selected_model or {})
+
+
+def _artifact_index(output_dir: Path) -> list[dict[str, object]]:
+    rows = []
+    for path in sorted(output_dir.glob("*")):
+        if not path.is_file():
+            continue
+        rows.append(
+            {
+                "path": path.name,
+                "suffix": path.suffix.lower(),
+                "size_bytes": path.stat().st_size,
+            }
+        )
+    return rows
 
 
 def append_model_registry(

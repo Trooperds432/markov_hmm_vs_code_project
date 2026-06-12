@@ -9,8 +9,10 @@ import pandas as pd
 from src.markov_hmm_trader.config import PipelineConfig
 from src.markov_hmm_trader.volatility_forecast import (
     ewma_volatility_forecast,
+    future_realised_vol,
     realised_volatility_forecast,
     run_volatility_forecasts,
+    vol_forecast_error_metrics,
 )
 
 
@@ -41,8 +43,26 @@ def test_volatility_forecast_contract_and_multiplier_bounds():
     )
     assert output["forecast_sigma"].ge(0.0).all()
     assert output["forecast_variance"].ge(0.0).all()
+    assert {"realised_future_sigma", "abs_error"}.issubset(output.columns)
     assert output["vol_risk_multiplier"].between(cfg.min_vol_mult, cfg.max_vol_mult).all()
     assert set(output["vol_model"]) == {"realised_vol", "ewma_vol", "garch", "arch"}
+
+
+def test_volatility_future_realised_and_error_metrics():
+    returns = pd.Series(np.random.default_rng(22).normal(0.0, 0.01, 80))
+    realised = future_realised_vol(returns, horizon=5, bars_per_year=252)
+    forecasts = pd.DataFrame(
+        {
+            "vol_model": ["ewma_vol"] * len(returns),
+            "forecast_sigma": realised.fillna(realised.mean()).values,
+            "realised_future_sigma": realised.values,
+        }
+    )
+
+    metrics = vol_forecast_error_metrics(forecasts)
+
+    assert realised.notna().sum() > 0
+    assert metrics.iloc[0]["mae"] >= 0.0
 
 
 def test_garch_arch_missing_dependency_writes_structured_errors(monkeypatch):

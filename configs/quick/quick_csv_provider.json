@@ -1,0 +1,15 @@
+{
+  "ticker": "LOCAL_ASSET",
+  "benchmark": "LOCAL_BENCH",
+  "data_provider": "csv",
+  "csv_data_dir": "data",
+  "start": "2020-01-01",
+  "train_window": 126,
+  "retrain_frequency": 63,
+  "n_iter": 10,
+  "random_seeds": [7],
+  "feature_groups_enabled": ["price_core", "volatility_core", "technical"],
+  "enable_volatility_forecasts": false,
+  "enable_experiment_tracking": false,
+  "enable_stress_tests": false
+}

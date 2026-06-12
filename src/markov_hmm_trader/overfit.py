@@ -105,14 +105,17 @@ def forecast_overfit_report(comparison: pd.DataFrame, cfg: PipelineConfig) -> pd
     if comparison.empty:
         return pd.DataFrame(columns=OVERFIT_COLUMNS)
     for row in comparison.itertuples(index=False):
-        metric = float(getattr(row, "cv_metric_value", np.nan))
+        validation_metric = float(
+            getattr(row, "validation_mae", getattr(row, "cv_metric_value", np.nan))
+        )
+        test_metric = float(getattr(row, "test_mae", np.nan))
         rows.append(
             overfit_row(
                 "forecast",
                 getattr(row, "model_name", getattr(row, "candidate_id", "")),
                 np.nan,
-                metric,
-                np.nan,
+                validation_metric,
+                test_metric,
                 cfg,
                 higher_is_better=False,
             )
@@ -125,14 +128,32 @@ def volatility_overfit_report(forecasts: pd.DataFrame, cfg: PipelineConfig) -> p
     if forecasts.empty:
         return pd.DataFrame(columns=OVERFIT_COLUMNS)
     for model_name, group in forecasts.groupby("vol_model", dropna=False):
-        metric = float(group.get("forecast_sigma", pd.Series(dtype=float)).mean())
+        errors = (
+            group.get("abs_error", pd.Series(dtype=float))
+            .replace(
+                [np.inf, -np.inf],
+                np.nan,
+            )
+            .dropna()
+        )
+        if errors.empty:
+            sigma = group.get("forecast_sigma", pd.Series(dtype=float)).replace(
+                [np.inf, -np.inf],
+                np.nan,
+            )
+            validation_metric = float(sigma.mean()) if sigma.notna().any() else np.nan
+            test_metric = np.nan
+        else:
+            split = max(int(len(errors) * 0.7), 1)
+            validation_metric = float(errors.iloc[:split].mean())
+            test_metric = float(errors.iloc[split:].mean()) if len(errors) > split else np.nan
         rows.append(
             overfit_row(
                 "volatility",
                 model_name,
                 np.nan,
-                metric,
-                np.nan,
+                validation_metric,
+                test_metric,
                 cfg,
                 higher_is_better=False,
             )

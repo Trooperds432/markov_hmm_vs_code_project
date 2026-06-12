@@ -35,11 +35,19 @@ def test_forecast_benchmarks_emit_required_columns():
         "lower_80",
         "upper_95",
         "direction_signal",
+        "realised_forward_return",
+        "abs_error",
         "error",
     }.issubset(predictions.columns)
-    assert {"model_name", "cv_metric_name", "cv_metric_value", "selected", "error"}.issubset(
-        comparison.columns
-    )
+    assert {
+        "model_name",
+        "cv_metric_name",
+        "cv_metric_value",
+        "validation_mae",
+        "test_mae",
+        "selected",
+        "error",
+    }.issubset(comparison.columns)
 
 
 def test_forecast_benchmarks_use_statsforecast_cross_validation(monkeypatch):

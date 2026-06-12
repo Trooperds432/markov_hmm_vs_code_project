@@ -10,7 +10,7 @@ from .backtest import walk_forward_backtest
 from .baselines import baseline_comparison, write_baseline_comparison
 from .config import PipelineConfig
 from .doctor import write_doctor_reports
-from .features import make_features
+from .features import all_feature_warnings, feature_manifest, make_features
 from .metrics import add_backtest_metric_columns, make_report
 from .model_audit import build_model_selection_candidates, write_model_selection_candidates
 from .output_contracts import assert_contract_results, validate_output_directory
@@ -104,6 +104,8 @@ def run_ci_smoke(
     stats.rename_axis("metric").to_frame("value").reset_index().to_csv(
         output_dir / "stats.csv", index=False
     )
+    feature_manifest(features, smoke_cfg).to_csv(output_dir / "feature_manifest.csv", index=False)
+    all_feature_warnings(features).to_csv(output_dir / "warnings.csv", index=False)
 
     split_registry = build_split_registry(
         features.index,

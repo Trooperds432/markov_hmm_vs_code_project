@@ -115,6 +115,26 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
     return float(np.clip(target, -cfg.max_exposure, cfg.max_exposure))
 
 
+def _semantic_confidence(next_probs: pd.DataFrame) -> pd.DataFrame:
+    probs = next_probs[STATE_ORDER].astype(float).clip(lower=0.0)
+    row_sums = probs.sum(axis=1).replace(0.0, np.nan)
+    normalized = probs.div(row_sums, axis=0).fillna(0.0)
+    entropy = -(normalized * np.log(normalized.replace(0.0, np.nan))).sum(axis=1).fillna(0.0)
+    denominator = np.log(len(STATE_ORDER))
+    sorted_probs = np.sort(normalized.values, axis=1)
+    top = sorted_probs[:, -1]
+    second = sorted_probs[:, -2] if normalized.shape[1] > 1 else np.zeros(len(normalized))
+    return pd.DataFrame(
+        {
+            "hmm_posterior_entropy": entropy.values,
+            "hmm_max_posterior": top,
+            "hmm_confidence": np.clip(1.0 - entropy.values / denominator, 0.0, 1.0),
+            "hmm_state_margin": top - second,
+        },
+        index=next_probs.index,
+    )
+
+
 def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResult:
     features = feature_columns(cfg)
     df = df.copy()
@@ -138,6 +158,12 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
     df["decoded_state_map"] = pd.Series(index=df.index, dtype="object")
     df["state_decode_disagreement"] = False
     df["hmm_window_id"] = np.nan
+    df["hmm_log_likelihood"] = np.nan
+    df["hmm_window_log_likelihood"] = np.nan
+    df["hmm_posterior_entropy"] = np.nan
+    df["hmm_max_posterior"] = np.nan
+    df["hmm_confidence"] = np.nan
+    df["hmm_state_margin"] = np.nan
     df["target_position"] = 0.0
 
     start_idx = cfg.train_window
@@ -177,12 +203,16 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
         decoded_map = [fit.state_map[int(x)] for x in decoded_map_raw]
 
         idx = test.index
+        confidence = _semantic_confidence(next_probs)
         df.loc[idx, STATE_ORDER] = next_probs[STATE_ORDER].values
         df.loc[idx, "hidden_state"] = decoded
         df.loc[idx, "decoded_state_viterbi"] = decoded
         df.loc[idx, "decoded_state_map"] = decoded_map
         df.loc[idx, "state_decode_disagreement"] = np.asarray(decoded) != np.asarray(decoded_map)
         df.loc[idx, "hmm_window_id"] = window_id
+        df.loc[idx, "hmm_window_log_likelihood"] = float(test_log_prob)
+        df.loc[idx, "hmm_log_likelihood"] = np.nan
+        df.loc[idx, confidence.columns] = confidence.values
 
         if cfg.enable_diagnostics:
             window_row = make_window_diagnostic_row(window_id, train, test, fit, next_probs)

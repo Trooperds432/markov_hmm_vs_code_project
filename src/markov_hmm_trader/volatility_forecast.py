@@ -23,6 +23,31 @@ def _horizon_variance_from_annual_sigma(sigma: pd.Series, cfg: PipelineConfig) -
     return (sigma / np.sqrt(cfg.bars_per_year)).pow(2) * cfg.vol_forecast_horizon_bars
 
 
+def future_realised_vol(returns: pd.Series, horizon: int, bars_per_year: int) -> pd.Series:
+    return returns.shift(-1).rolling(max(int(horizon), 2)).std(ddof=0).shift(
+        -(max(int(horizon), 2) - 1)
+    ) * np.sqrt(bars_per_year)
+
+
+def vol_forecast_error_metrics(forecasts: pd.DataFrame) -> pd.DataFrame:
+    if forecasts.empty or "realised_future_sigma" not in forecasts:
+        return pd.DataFrame(columns=["vol_model", "mae", "rmse", "rows"])
+    rows = []
+    for model, group in forecasts.groupby("vol_model", dropna=False):
+        errors = (
+            group["forecast_sigma"].astype(float) - group["realised_future_sigma"].astype(float)
+        ).dropna()
+        rows.append(
+            {
+                "vol_model": model,
+                "mae": float(errors.abs().mean()) if not errors.empty else np.nan,
+                "rmse": float(np.sqrt(errors.pow(2).mean())) if not errors.empty else np.nan,
+                "rows": int(errors.count()),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def _risk_multiplier(sigma: pd.Series, cfg: PipelineConfig) -> tuple[pd.Series, pd.Series]:
     lookback = int(cfg.vol_rank_window or cfg.vol_risk_lookback)
     lower = max(float(cfg.min_vol_mult), float(cfg.vol_min_risk_multiplier))
@@ -105,6 +130,11 @@ def _statsforecast_volatility_forecast(
 def run_volatility_forecasts(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     rows = []
     returns = df["ret_1"].fillna(0.0)
+    realised_future = future_realised_vol(
+        returns,
+        int(cfg.vol_forecast_horizon_bars),
+        int(cfg.bars_per_year),
+    )
 
     for model in cfg.vol_model_candidates:
         model_name = model.lower()
@@ -139,6 +169,16 @@ def run_volatility_forecasts(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFr
                     "horizon_bars": int(cfg.vol_forecast_horizon_bars),
                     "forecast_sigma": float(sigma.loc[date]),
                     "forecast_variance": float(max(variance.loc[date], 0.0)),
+                    "realised_future_sigma": (
+                        float(realised_future.loc[date])
+                        if pd.notna(realised_future.loc[date])
+                        else np.nan
+                    ),
+                    "abs_error": (
+                        abs(float(sigma.loc[date]) - float(realised_future.loc[date]))
+                        if pd.notna(realised_future.loc[date])
+                        else np.nan
+                    ),
                     "vol_rank": float(vol_rank.loc[date]),
                     "vol_risk_multiplier": float(risk_multiplier.loc[date]),
                     "split": "oos_proxy",

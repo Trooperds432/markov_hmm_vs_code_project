@@ -12,6 +12,7 @@ Providers:
 
 Provider selection is controlled by `data_provider`. Providers expose
 `supports(capability)` so feature groups can decide whether to run or write a skip row.
+The factory accepts `yfinance`, `csv`, `synthetic`, and `openbb`.
 
 Cache behavior:
 
@@ -27,3 +28,10 @@ Diagnostics:
   `live_provider_error_used_cache`, and `missing_optional_dependency`.
 
 Optional data extras live in `requirements-data.txt`. Base installs do not require OpenBB.
+
+Structured warnings:
+
+- Missing optional packages use `missing_optional_dependency`.
+- Unsupported provider methods use `unsupported_capability`.
+- Provider runtime failures use `provider_error`.
+- All warning rows are included in top-level `warnings.csv`.

@@ -50,4 +50,12 @@ def test_walk_forward_smoke_on_synthetic_data():
         "decoded_state_viterbi",
         "decoded_state_map",
         "state_decode_disagreement",
+        "hmm_posterior_entropy",
+        "hmm_max_posterior",
+        "hmm_confidence",
+        "hmm_state_margin",
+        "hmm_window_log_likelihood",
     }.issubset(result.backtest.columns)
+    scored = result.backtest["hmm_confidence"].dropna()
+    assert not scored.empty
+    assert scored.between(0.0, 1.0).all()

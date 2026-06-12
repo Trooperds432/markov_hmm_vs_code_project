@@ -9,7 +9,9 @@ Core outputs:
 - `state_summary.csv`
 
 `equity_curve.csv` preserves `hidden_state` and adds HMM decode compatibility columns
-`decoded_state_viterbi`, `decoded_state_map`, and `state_decode_disagreement`.
+`decoded_state_viterbi`, `decoded_state_map`, and `state_decode_disagreement`. It also
+includes HMM confidence fields: `hmm_posterior_entropy`, `hmm_max_posterior`,
+`hmm_confidence`, `hmm_state_margin`, and `hmm_window_log_likelihood`.
 
 HMM outputs:
 
@@ -33,6 +35,10 @@ Data and feature outputs:
 - `data_provider_warnings.csv`
 - `feature_group_metadata.csv`
 - `feature_group_warnings.csv`
+- `feature_manifest.csv`
+- `warnings.csv`
+- `artifacts_index.json`
+- `experiment_metadata.json`
 
 Stage 2E provider and feature-group outputs use structured metadata/warning rows so
 optional enrichment can skip cleanly without hiding missing provider support.
@@ -62,7 +68,8 @@ Risk and overfit outputs:
 `model_overfit_report.csv` can contain rows for HMM, forecast, volatility, NN, and
 nested optimiser candidates. Higher-is-better metrics such as likelihoods and
 lower-is-better metrics such as losses are gap-adjusted before warning thresholds are
-applied. Missing train/validation/test values are written as `missing_metric` rows.
+applied. Forecast and volatility rows use realised future error metrics when available.
+Missing train/validation/test values are written as `missing_metric` rows.
 
 NN and ensemble outputs:
 

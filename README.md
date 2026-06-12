@@ -98,6 +98,15 @@ Research modes:
 - `--mode ci_smoke`: deterministic synthetic-data smoke run with output-contract checks
 - `--mode diagnostics`: doctor plus diagnostics output-contract checks
 
+Stage 2E quick configs live under `configs/quick/` and use synthetic/offline paths where
+possible, for example:
+
+```bash
+python main.py --config configs/quick/quick_synthetic_provider.json --no-plots
+python main.py --config configs/quick/quick_volatility_realised_ewma.json --no-plots
+python main.py --config configs/quick/quick_forecast_benchmarks.json --no-plots
+```
+
 ## Outputs
 
 Main run outputs:
@@ -123,6 +132,8 @@ Diagnostics:
 - `feature_summary.csv`: feature distribution and missingness summary
 - `data_provider_metadata.csv`, `data_provider_warnings.csv`: Stage 2E provider coverage and structured warning rows
 - `feature_group_metadata.csv`, `feature_group_warnings.csv`: feature-group contracts, produced columns, and optional skip reasons
+- `feature_manifest.csv`: feature source, missingness, leakage status, and whether it is used by the HMM
+- `warnings.csv`: normalized structured warnings across provider and feature layers
 - `observable_markov_baseline.csv`, `observable_markov_stationary_distribution.csv`: transparent Markov baseline labels and stationary probabilities
 - `nn_predictions.csv`, `nn_forecasts.csv`, `nn_oos_split_info.csv`, `ensemble_diagnostics.csv`: optional NN/ensemble diagnostics, including `multi_signal` mode when configured
 - `volatility_forecasts.csv`: realised, EWMA, GARCH, and ARCH volatility forecasts
@@ -144,6 +155,7 @@ Other modes:
 - Paper simulation: `paper_orders.csv`, `paper_positions.csv`, `paper_daily_equity.csv`, `paper_equity.csv`, `paper_risk_checks.csv`
 - Experiments: `experiments/runs/...` config snapshots, environment info, copied CSVs, and `experiments/registry/model_registry.csv`
 - Stage 2D diagnostics: `outputs/diagnostics/dependency_report.json`, `dependency_report.txt`, `split_registry.csv`, `model_selection_candidates.csv`, `baseline_comparison.csv`, and `experiment_metadata.json`
+- Stage 2E experiment artifacts: `artifacts_index.json`, `experiment_metadata.json`, `warnings.csv`, and `feature_manifest.csv`
 
 Stage 2E data-platform docs:
 

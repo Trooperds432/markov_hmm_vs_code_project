@@ -11,15 +11,15 @@ Implemented groups:
 - `alpha158_lite`: lightweight Qlib-inspired rolling return, slope, correlation,
   volume, volatility, and price-position features.
 - `breadth`: provider-backed market breadth context when the active provider supports it.
+- `options`: OpenBB/mock-chain implied volatility, skew, open-interest, volume, gamma,
+  and vega proxies.
+- `macro`: OpenBB/mock macro data or existing proxy-symbol fallbacks.
+- `fundamentals`: optional statement/metric features with graceful partial-data handling.
+- `news`: lightweight headline-count and lexicon sentiment features.
+- `famafrench`: factor joins and rolling factor beta proxies.
+- `alt_bars`: lightweight volume/range-bar pressure features.
 
-Optional/skipped groups:
-
-- `macro`
-- `fundamentals`
-- `news`
-- `options`
-- `famafrench`
-- `alt_bars`
+`qlib_alpha` is accepted as a config alias for `alpha158_lite`.
 
 Every feature group returns the same contract:
 
@@ -33,6 +33,10 @@ Main-run diagnostics:
 
 - `feature_group_metadata.csv`
 - `feature_group_warnings.csv`
+- `feature_manifest.csv`
 
 Warnings are intentional for optional groups when the active provider lacks the required
 capability. This is how OpenBB-style enrichment can remain optional without silent skips.
+
+By default, enriched feature columns are visible in diagnostics but are not HMM observations.
+Set `hmm_feature_set` explicitly to opt into a custom observation set.

@@ -9,6 +9,7 @@ from .backtest import walk_forward_backtest
 from .benchmark import run_markov_regression_benchmark
 from .config import PipelineConfig
 from .data import (
+    all_data_provider_warnings,
     data_provider_metadata,
     data_provider_warnings,
     factor_data_coverage,
@@ -17,7 +18,14 @@ from .data import (
 from .diagnostics import summarize_states
 from .ensemble import ensemble_diagnostics
 from .experiment import finalize_experiment_run, start_experiment_run
-from .features import feature_group_metadata, feature_group_warnings, feature_summary, make_features
+from .features import (
+    all_feature_warnings,
+    feature_group_metadata,
+    feature_group_warnings,
+    feature_manifest,
+    feature_summary,
+    make_features,
+)
 from .forecast_benchmarks import run_forecast_benchmarks
 from .metrics import add_backtest_metric_columns, make_report
 from .model_overfit_report import (
@@ -43,6 +51,15 @@ from .stress import (
     make_stress_tests,
 )
 from .volatility_forecast import run_volatility_forecasts
+from .warnings import normalize_warning_frame
+
+
+def _combined_warnings(raw: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
+    frames = [all_data_provider_warnings(raw), all_feature_warnings(features)]
+    clean = [frame for frame in frames if frame is not None and not frame.empty]
+    if not clean:
+        return normalize_warning_frame(None)
+    return normalize_warning_frame(pd.concat(clean, ignore_index=True))
 
 
 def run_single(
@@ -72,11 +89,13 @@ def run_single(
     print("Creating report...")
     stats = make_report(backtest, run_cfg)
 
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     backtest.to_csv(output_dir / "equity_curve.csv")
     stats.rename_axis("metric").to_frame("value").reset_index().to_csv(
         output_dir / "stats.csv", index=False
     )
+    feature_manifest(features, run_cfg).to_csv(output_dir / "feature_manifest.csv", index=False)
+    _combined_warnings(raw, features).to_csv(output_dir / "warnings.csv", index=False)
 
     if diagnostics_enabled:
         print("Saving diagnostics...")
