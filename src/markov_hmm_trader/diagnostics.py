@@ -305,6 +305,18 @@ def make_component_diagnostic_rows(
             ),
             "sideways_score": _safe_float(stats.get("sideways_score", np.nan)),
         }
+        if hidden is not None:
+            mask = hidden == component
+            for source, target in {
+                "vol_cluster_score": "vol_cluster_score_by_component",
+                "stationarity_risk_score": "stationarity_risk_by_component",
+                "market_residual_zscore": "market_residual_z_by_component",
+                "systemic_correlation_score": "correlation_risk_by_component",
+                "residual_tail_risk_score": "tail_risk_by_component",
+            }.items():
+                row[target] = (
+                    _safe_float(train.loc[mask, source].mean()) if source in train else np.nan
+                )
         rows.append(row)
     return rows
 

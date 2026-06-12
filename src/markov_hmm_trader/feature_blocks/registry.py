@@ -16,6 +16,7 @@ from .news_features import build_news_features
 from .options_features import build_options_features
 from .price_core import build_price_core
 from .qlib_alpha_features import build_alpha158_lite
+from .research_public_features import build_research_public_features
 from .technical_features import build_technical_features
 from .volatility_core import build_volatility_core
 
@@ -44,6 +45,7 @@ BUILDERS: dict[str, FeatureBuilder] = {
     "news": lambda df, cfg, provider: build_news_features(df, cfg, provider),
     "famafrench": lambda df, cfg, provider: build_famafrench_features(df, cfg, provider),
     "alt_bars": lambda df, cfg, provider: build_alt_bar_features(df),
+    "research_public": lambda df, cfg, provider: build_research_public_features(df, cfg, provider),
 }
 
 KNOWN_FEATURE_GROUPS = set(BUILDERS).union(FEATURE_GROUP_ALIASES)

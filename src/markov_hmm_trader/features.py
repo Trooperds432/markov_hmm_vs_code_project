@@ -62,13 +62,45 @@ FACTOR_FEATURE_COLUMNS = [
     "cross_asset_risk_score",
 ]
 
+FORBIDDEN_HMM_FEATURE_TOKENS = (
+    "forward_return",
+    "future_return",
+    "target",
+    "label",
+    "pvalue_from_future",
+    "top_decile_forward_return",
+    "bottom_decile_forward_return",
+    "long_short_spread_return",
+    "factor_hit_rate",
+    "factor_decay",
+    "hypothesis",
+)
+
+
+def validate_hmm_observation_columns(columns: list[str]) -> None:
+    forbidden = [
+        column
+        for column in columns
+        if any(token in column.lower() for token in FORBIDDEN_HMM_FEATURE_TOKENS)
+    ]
+    if forbidden:
+        raise ValueError(
+            "Validation-only or future-looking columns cannot be HMM observations: " f"{forbidden}"
+        )
+
 
 def feature_columns(cfg: PipelineConfig | None = None) -> list[str]:
     if cfg is not None and cfg.hmm_feature_set:
-        return list(cfg.hmm_feature_set)
-    columns = list(BASE_FEATURE_COLUMNS)
+        columns = list(cfg.hmm_feature_set)
+    else:
+        columns = list(BASE_FEATURE_COLUMNS)
     if cfg is not None and cfg.use_extra_factor_features:
         columns.extend(FACTOR_FEATURE_COLUMNS)
+    if cfg is not None and cfg.use_research_public_hmm_features:
+        for column in cfg.research_public_hmm_features:
+            if column not in columns:
+                columns.append(column)
+    validate_hmm_observation_columns(columns)
     return columns
 
 
@@ -198,11 +230,14 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
             cfg,
             provider=get_data_provider(cfg),
         )
-        for column in feature_group_result.features.columns:
-            out[column] = feature_group_result.features[column].replace(
-                [np.inf, -np.inf],
-                np.nan,
-            )
+        group_features = feature_group_result.features.replace([np.inf, -np.inf], np.nan)
+        group_features = group_features.loc[:, ~group_features.columns.duplicated()]
+        overlapping_columns = [column for column in group_features.columns if column in out]
+        for column in overlapping_columns:
+            out[column] = group_features[column]
+        new_group_features = group_features.drop(columns=overlapping_columns, errors="ignore")
+        if not new_group_features.empty:
+            out = pd.concat([out, new_group_features], axis=1)
         feature_group_attrs = {
             "feature_group_metadata": feature_group_result.metadata.to_dict("records"),
             "feature_group_warnings": feature_group_result.warnings.to_dict("records"),
@@ -246,7 +281,11 @@ def make_features(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
 
 def feature_summary(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
     rows = []
-    for feature in feature_columns(cfg):
+    metadata = feature_group_metadata(df)
+    configured = list(feature_columns(cfg))
+    if not metadata.empty:
+        configured.extend(str(feature) for feature in metadata["feature"].dropna().tolist())
+    for feature in dict.fromkeys(configured):
         if feature not in df:
             continue
         series = df[feature]

@@ -18,6 +18,7 @@ from .data import (
 from .diagnostics import summarize_states
 from .ensemble import ensemble_diagnostics
 from .experiment import finalize_experiment_run, start_experiment_run
+from .factor_validation import factor_rank_diagnostics, long_short_spread_diagnostics
 from .features import (
     all_feature_warnings,
     feature_group_metadata,
@@ -27,6 +28,7 @@ from .features import (
     make_features,
 )
 from .forecast_benchmarks import run_forecast_benchmarks
+from .hypothesis_validation import run_hypothesis_validation, statistical_validity_report
 from .metrics import add_backtest_metric_columns, make_report
 from .model_overfit_report import (
     build_model_overfit_report,
@@ -104,6 +106,30 @@ def run_single(
         data_provider_metadata(raw).to_csv(output_dir / "data_provider_metadata.csv", index=False)
         data_provider_warnings(raw).to_csv(output_dir / "data_provider_warnings.csv", index=False)
         feature_summary(features, run_cfg).to_csv(output_dir / "feature_summary.csv", index=False)
+        if run_cfg.enable_research_public_features:
+            manifest = feature_manifest(features, run_cfg)
+            research_features = manifest[manifest["source_block"].eq("research_public")]
+            summary = feature_summary(features, run_cfg)
+            research_summary = summary[summary["feature"].isin(research_features["feature"])]
+            research_summary.to_csv(
+                output_dir / "research_public_feature_summary.csv",
+                index=False,
+            )
+            factor_rank_diagnostics(backtest, run_cfg).to_csv(
+                output_dir / "factor_rank_diagnostics.csv",
+                index=False,
+            )
+            long_short_spread_diagnostics(backtest, run_cfg).to_csv(
+                output_dir / "long_short_spread_diagnostics.csv",
+                index=False,
+            )
+            hypothesis_validation = run_hypothesis_validation(backtest, run_cfg)
+            hypothesis_validation.to_csv(output_dir / "hypothesis_validation.csv", index=False)
+            statistical_validity_report(
+                backtest,
+                hypothesis_validation,
+                _combined_warnings(raw, features),
+            ).to_csv(output_dir / "statistical_validity_report.csv", index=False)
         feature_group_metadata(features).to_csv(
             output_dir / "feature_group_metadata.csv",
             index=False,

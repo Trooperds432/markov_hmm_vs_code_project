@@ -40,6 +40,65 @@ class PipelineConfig:
     max_feature_missing_ratio: float = 0.30
     feature_winsorize_limits: tuple[float, float] = (0.01, 0.99)
     use_processor_pipeline: bool = True
+    enable_research_public_features: bool = False
+    research_public_feature_set: tuple[str, ...] = (
+        "stationarity",
+        "autoregressive",
+        "volatility_clustering",
+        "market_residual",
+        "correlation_regime",
+        "regression_diagnostics",
+        "pca_market_mode",
+        "cointegration_spread",
+        "factor_ranks",
+        "instability",
+    )
+    research_public_windows: tuple[int, ...] = (20, 60, 120)
+    stationarity_windows: tuple[int, ...] = (60, 120)
+    acf_lags: tuple[int, ...] = (1, 5, 10)
+    rolling_beta_window: int = 60
+    rolling_corr_window: int = 60
+    pca_window: int = 120
+    pca_universe_symbols: tuple[str, ...] = ("SPY", "QQQ", "SMH", "XLK")
+    cointegration_window: int = 252
+    cointegration_peer_symbols: tuple[str, ...] = ()
+    factor_rank_universe: tuple[str, ...] = ()
+    hypothesis_alpha: float = 0.05
+    min_periods_ratio: float = 0.70
+    use_research_public_hmm_features: bool = False
+    research_public_hmm_features: tuple[str, ...] = (
+        "ret_1",
+        "ret_5",
+        "ret_20",
+        "acf_1",
+        "acf_5",
+        "ar1_beta_60d",
+        "ar1_residual_zscore",
+        "ewma_vol_20d",
+        "ewma_vol_60d",
+        "vol_ratio_20_60",
+        "vol_of_vol_20d",
+        "tail_ratio_vs_normal",
+        "adf_pvalue_60d",
+        "rolling_mean_instability",
+        "rolling_vol_instability",
+        "rolling_beta_instability",
+        "rolling_beta_spy_60d",
+        "market_model_r2",
+        "market_residual_zscore",
+        "corr_spy_60d",
+        "average_market_correlation",
+        "pc1_explained_variance",
+        "asset_loading_pc1",
+        "idiosyncratic_residual_from_pca",
+        "sector_spread_zscore",
+        "spread_half_life",
+        "rank_percentile",
+    )
+    use_statistical_confidence_scaling: bool = False
+    min_statistical_confidence_mult: float = 0.25
+    max_statistical_confidence_mult: float = 1.25
+    use_research_public_state_mapping: bool = False
 
     # HMM
     n_states: int = 3
@@ -328,7 +387,13 @@ def load_config(path: str | Path) -> PipelineConfig:
         and "overfit_validation_test_gap_threshold" not in raw
     ):
         raw["overfit_validation_test_gap_threshold"] = raw["overfit_validation_test_gap_warn"]
-    for key in ("feature_groups_enabled", "optional_feature_groups", "hmm_feature_set"):
+    for key in (
+        "feature_groups_enabled",
+        "optional_feature_groups",
+        "hmm_feature_set",
+        "research_public_feature_set",
+        "research_public_hmm_features",
+    ):
         if key in raw and isinstance(raw[key], list):
             raw[key] = ["alpha158_lite" if item == "qlib_alpha" else item for item in raw[key]]
 
@@ -341,6 +406,14 @@ def load_config(path: str | Path) -> PipelineConfig:
         "feature_groups_enabled",
         "optional_feature_groups",
         "hmm_feature_set",
+        "research_public_feature_set",
+        "research_public_windows",
+        "stationarity_windows",
+        "acf_lags",
+        "pca_universe_symbols",
+        "cointegration_peer_symbols",
+        "factor_rank_universe",
+        "research_public_hmm_features",
         "feature_winsorize_limits",
         "hmm_model_types",
         "hmm_model_type_candidates",

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from .confidence import apply_statistical_confidence_scaling
 from .config import PipelineConfig
 from .diagnostics import (
     make_component_diagnostic_rows,
@@ -112,6 +113,7 @@ def compute_position_for_row(row: pd.Series, equity_dd: float, cfg: PipelineConf
             short_exposure = -cfg.base_exposure * confidence_mult * vol_mult * dd_mult
 
     target = long_exposure if abs(long_exposure) >= abs(short_exposure) else short_exposure
+    target *= apply_statistical_confidence_scaling(row, cfg)
     return float(np.clip(target, -cfg.max_exposure, cfg.max_exposure))
 
 
@@ -133,6 +135,36 @@ def _semantic_confidence(next_probs: pd.DataFrame) -> pd.DataFrame:
         },
         index=next_probs.index,
     )
+
+
+def _add_statistical_confidence_columns(df: pd.DataFrame, cfg: PipelineConfig) -> pd.DataFrame:
+    df = df.copy()
+    prob_instability = df[STATE_ORDER].rolling(20, min_periods=5).std(ddof=0).mean(axis=1)
+    df["hmm_state_prob_instability"] = prob_instability
+    if "parameter_instability_z" not in df:
+        rolling_mean = prob_instability.rolling(60, min_periods=20).mean()
+        rolling_std = prob_instability.rolling(60, min_periods=20).std(ddof=0)
+        df["parameter_instability_z"] = (prob_instability - rolling_mean) / rolling_std.replace(
+            0.0,
+            np.nan,
+        )
+    else:
+        computed = prob_instability.rolling(60, min_periods=20).mean()
+        df["parameter_instability_z"] = df["parameter_instability_z"].fillna(computed)
+    instability = df["parameter_instability_z"].clip(lower=0.0).fillna(0.0)
+    df["stability_confidence_multiplier"] = np.clip(1.0 - 0.20 * instability, 0.25, 1.25)
+    df["statistical_confidence_multiplier"] = [
+        apply_statistical_confidence_scaling(row, cfg) for _, row in df.iterrows()
+    ]
+    for column in (
+        "stationarity_risk_score",
+        "vol_cluster_score",
+        "systemic_correlation_score",
+        "residual_tail_risk_score",
+    ):
+        if column not in df:
+            df[column] = np.nan
+    return df
 
 
 def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResult:
@@ -244,6 +276,7 @@ def walk_forward_backtest(df: pd.DataFrame, cfg: PipelineConfig) -> BacktestResu
     if cfg.enable_nn_confirmation or cfg.ensemble_mode != "hmm_only":
         df = add_nn_confirmation(df, features, cfg)
         df = add_ensemble_signals(df, cfg)
+    df = _add_statistical_confidence_columns(df, cfg)
 
     equity = 1.0
     peak = 1.0

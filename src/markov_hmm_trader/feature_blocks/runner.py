@@ -13,13 +13,18 @@ def build_configured_feature_groups(
     cfg: PipelineConfig,
     provider: BaseDataProvider | None = None,
 ) -> FeatureBlockResult:
+    configured_groups = list(cfg.feature_groups_enabled)
+    if (
+        cfg.enable_research_public_features or cfg.use_research_public_hmm_features
+    ) and "research_public" not in configured_groups:
+        configured_groups.append("research_public")
     groups = list(
         dict.fromkeys(
             canonical_feature_group(group)
-            for group in (*cfg.feature_groups_enabled, *cfg.optional_feature_groups)
+            for group in (*configured_groups, *cfg.optional_feature_groups)
         )
     )
-    enabled = {canonical_feature_group(item) for item in cfg.feature_groups_enabled}
+    enabled = {canonical_feature_group(item) for item in configured_groups}
     feature_frames = []
     metadata_frames = []
     warning_frames = []

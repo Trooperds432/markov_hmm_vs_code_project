@@ -7,6 +7,7 @@ import pandas as pd
 
 from .config import PipelineConfig
 from .data import load_market_data
+from .factor_validation import factor_rank_diagnostics, long_short_spread_diagnostics
 from .features import make_features
 from .metrics import cagr, max_drawdown, sharpe
 from .runner import run_single
@@ -166,6 +167,18 @@ def run_portfolio(cfg: PipelineConfig, output_dir) -> dict[str, pd.DataFrame | p
     outputs["portfolio_asset_signals"].to_csv(
         output_dir / "portfolio_asset_signals.csv", index=False
     )
+    if cfg.enable_research_public_features:
+        rank_source = equity_curve.copy()
+        rank_source["rank_percentile"] = scores.rank(axis=1, pct=True).mean(axis=1)
+        rank_source["ret_1"] = portfolio_returns
+        factor_rank_diagnostics(rank_source, cfg).to_csv(
+            output_dir / "factor_rank_diagnostics.csv",
+            index=False,
+        )
+        long_short_spread_diagnostics(rank_source, cfg).to_csv(
+            output_dir / "long_short_spread_diagnostics.csv",
+            index=False,
+        )
     return outputs
 
 

@@ -18,6 +18,7 @@ KNOWN_FEATURE_GROUPS = {
     "options",
     "famafrench",
     "alt_bars",
+    "research_public",
 }
 
 

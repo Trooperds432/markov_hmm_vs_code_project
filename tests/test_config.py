@@ -80,3 +80,27 @@ def test_stage2e_feature_group_aliases_and_tuple_fields_load(tmp_path):
     assert cfg.feature_groups_enabled == ("price_core", "alpha158_lite")
     assert cfg.hmm_feature_set == ("z_ret_1",)
     assert cfg.feature_winsorize_limits == (0.02, 0.98)
+
+
+def test_research_public_tuple_fields_load(tmp_path):
+    path = tmp_path / "cfg.json"
+    path.write_text(
+        """
+        {
+          "enable_research_public_features": true,
+          "feature_groups_enabled": ["research_public"],
+          "research_public_feature_set": ["stationarity", "autoregressive"],
+          "research_public_hmm_features": ["acf_1", "ewma_vol_20d"],
+          "stationarity_windows": [60],
+          "acf_lags": [1, 5]
+        }
+        """,
+        encoding="utf-8",
+    )
+
+    cfg = load_config(path)
+
+    assert cfg.research_public_feature_set == ("stationarity", "autoregressive")
+    assert cfg.research_public_hmm_features == ("acf_1", "ewma_vol_20d")
+    assert cfg.stationarity_windows == (60,)
+    assert cfg.acf_lags == (1, 5)
