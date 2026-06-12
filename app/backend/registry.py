@@ -4,7 +4,7 @@ import json
 import os
 import re
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,11 +16,11 @@ TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def new_run_id(suffix: str) -> str:
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     return f"{stamp}-{suffix}"
 
 
@@ -80,34 +80,19 @@ def list_meta() -> list[dict]:
         if not child.is_dir() or not RUN_ID_RE.match(child.name):
             continue
         meta = read_meta(child.name)
-        if meta:
+        if meta is not None:
             metas.append(meta)
-    metas.sort(key=lambda m: m.get("created_at", ""), reverse=True)
-    return metas
+    return sorted(metas, key=lambda item: item.get("created_at", ""), reverse=True)
 
 
 def rebuild_registry() -> None:
-    """Rebuild run_registry.json by scanning per-run meta files."""
-    metas = list_meta()
-    snapshot = {
-        "generated_at": now_iso(),
-        "count": len(metas),
-        "runs": metas,
-    }
-    with _LOCK:
-        _atomic_write_json(settings.REGISTRY_PATH, snapshot)
-
-
-def recover_orphans() -> int:
-    """Mark queued/running runs from a previous process as failed."""
-    fixed = 0
-    for meta in list_meta():
-        if meta.get("status") in {"queued", "running"}:
-            update_meta(
-                meta["run_id"],
-                status="failed",
-                error="Run was interrupted by a server restart.",
-                finished_at=now_iso(),
-            )
-            fixed += 1
-    return fixed
+    settings.ensure_dirs()
+    metas = []
+    for child in settings.APP_RUNS_DIR.iterdir():
+        if not child.is_dir() or not RUN_ID_RE.match(child.name):
+            continue
+        meta = _read_meta_unlocked(child.name)
+        if meta is not None:
+            metas.append(meta)
+    metas.sort(key=lambda item: item.get("created_at", ""), reverse=True)
+    _atomic_write_json(settings.APP_RUNS_DIR / "registry.json", {"runs": metas})
