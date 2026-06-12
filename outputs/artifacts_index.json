@@ -1,0 +1,497 @@
+[
+  {
+    "path": "active_modules.csv",
+    "suffix": ".csv",
+    "size_bytes": 2553
+  },
+  {
+    "path": "alt_data_feature_summary.csv",
+    "suffix": ".csv",
+    "size_bytes": 1356
+  },
+  {
+    "path": "alt_data_overlay.csv",
+    "suffix": ".csv",
+    "size_bytes": 8299
+  },
+  {
+    "path": "alt_data_warnings.csv",
+    "suffix": ".csv",
+    "size_bytes": 2
+  },
+  {
+    "path": "asset_bootstrap_stress.csv",
+    "suffix": ".csv",
+    "size_bytes": 2
+  },
+  {
+    "path": "cost_slippage_stress.csv",
+    "suffix": ".csv",
+    "size_bytes": 1087
+  },
+  {
+    "path": "crisis_window_stress.csv",
+    "suffix": ".csv",
+    "size_bytes": 569
+  },
+  {
+    "path": "data_provider_metadata.csv",
+    "suffix": ".csv",
+    "size_bytes": 126
+  },
+  {
+    "path": "data_provider_warnings.csv",
+    "suffix": ".csv",
+    "size_bytes": 42
+  },
+  {
+    "path": "ensemble_diagnostics.csv",
+    "suffix": ".csv",
+    "size_bytes": 378034
+  },
+  {
+    "path": "ensemble_predictions.csv",
+    "suffix": ".csv",
+    "size_bytes": 378034
+  },
+  {
+    "path": "equity_curve.csv",
+    "suffix": ".csv",
+    "size_bytes": 4452719
+  },
+  {
+    "path": "equity_plot.png",
+    "suffix": ".png",
+    "size_bytes": 88743
+  },
+  {
+    "path": "experiment_manifest.json",
+    "suffix": ".json",
+    "size_bytes": 10775
+  },
+  {
+    "path": "factor_data_coverage.csv",
+    "suffix": ".csv",
+    "size_bytes": 150
+  },
+  {
+    "path": "factor_rank_diagnostics.csv",
+    "suffix": ".csv",
+    "size_bytes": 312
+  },
+  {
+    "path": "feature_drop_report.csv",
+    "suffix": ".csv",
+    "size_bytes": 2
+  },
+  {
+    "path": "feature_group_metadata.csv",
+    "suffix": ".csv",
+    "size_bytes": 483
+  },
+  {
+    "path": "feature_group_warnings.csv",
+    "suffix": ".csv",
+    "size_bytes": 37
+  },
+  {
+    "path": "feature_manifest.csv",
+    "suffix": ".csv",
+    "size_bytes": 2310
+  },
+  {
+    "path": "feature_quality_report.csv",
+    "suffix": ".csv",
+    "size_bytes": 2620
+  },
+  {
+    "path": "feature_summary.csv",
+    "suffix": ".csv",
+    "size_bytes": 2063
+  },
+  {
+    "path": "forecast_benchmarks.csv",
+    "suffix": ".csv",
+    "size_bytes": 172
+  },
+  {
+    "path": "forecast_confirmation_diagnostics.csv",
+    "suffix": ".csv",
+    "size_bytes": 19173
+  },
+  {
+    "path": "forecast_model_comparison.csv",
+    "suffix": ".csv",
+    "size_bytes": 172
+  },
+  {
+    "path": "forecast_predictions.csv",
+    "suffix": ".csv",
+    "size_bytes": 6882
+  },
+  {
+    "path": "glassdoor_features.csv",
+    "suffix": ".csv",
+    "size_bytes": 31782
+  },
+  {
+    "path": "hmm_component_diagnostics.csv",
+    "suffix": ".csv",
+    "size_bytes": 32627
+  },
+  {
+    "path": "hmm_decode_comparison.csv",
+    "suffix": ".csv",
+    "size_bytes": 257100
+  },
+  {
+    "path": "hmm_emissions.csv",
+    "suffix": ".csv",
+    "size_bytes": 215331
+  },
+  {
+    "path": "hmm_model_selection.csv",
+    "suffix": ".csv",
+    "size_bytes": 58177
+  },
+  {
+    "path": "hmm_state_stability.csv",
+    "suffix": ".csv",
+    "size_bytes": 7651
+  },
+  {
+    "path": "hmm_stationary_distribution.csv",
+    "suffix": ".csv",
+    "size_bytes": 14164
+  },
+  {
+    "path": "hmm_synthetic_sample_stress.csv",
+    "suffix": ".csv",
+    "size_bytes": 27776
+  },
+  {
+    "path": "hmm_synthetic_sample_stress_summary.csv",
+    "suffix": ".csv",
+    "size_bytes": 1341
+  },
+  {
+    "path": "hmm_transition_matrices.csv",
+    "suffix": ".csv",
+    "size_bytes": 21053
+  },
+  {
+    "path": "hypothesis_validation.csv",
+    "suffix": ".csv",
+    "size_bytes": 1739
+  },
+  {
+    "path": "long_short_spread_diagnostics.csv",
+    "suffix": ".csv",
+    "size_bytes": 346
+  },
+  {
+    "path": "missing_data_stress.csv",
+    "suffix": ".csv",
+    "size_bytes": 401
+  },
+  {
+    "path": "model_comparison.csv",
+    "suffix": ".csv",
+    "size_bytes": 2842
+  },
+  {
+    "path": "model_comparison_equity_curves.csv",
+    "suffix": ".csv",
+    "size_bytes": 253425
+  },
+  {
+    "path": "model_overfit_report.csv",
+    "suffix": ".csv",
+    "size_bytes": 9867
+  },
+  {
+    "path": "model_selection_candidates.csv",
+    "suffix": ".csv",
+    "size_bytes": 17693
+  },
+  {
+    "path": "model_state_comparison.csv",
+    "suffix": ".csv",
+    "size_bytes": 258
+  },
+  {
+    "path": "nested_candidate_results.csv",
+    "suffix": ".csv",
+    "size_bytes": 19909
+  },
+  {
+    "path": "nested_oos_equity_curve.csv",
+    "suffix": ".csv",
+    "size_bytes": 8016
+  },
+  {
+    "path": "nested_window_results.csv",
+    "suffix": ".csv",
+    "size_bytes": 6326
+  },
+  {
+    "path": "nn_forecasts.csv",
+    "suffix": ".csv",
+    "size_bytes": 211608
+  },
+  {
+    "path": "nn_oos_split_info.csv",
+    "suffix": ".csv",
+    "size_bytes": 455
+  },
+  {
+    "path": "nn_predictions.csv",
+    "suffix": ".csv",
+    "size_bytes": 135128
+  },
+  {
+    "path": "nn_training_metrics.csv",
+    "suffix": ".csv",
+    "size_bytes": 217
+  },
+  {
+    "path": "observable_markov_baseline.csv",
+    "suffix": ".csv",
+    "size_bytes": 18649
+  },
+  {
+    "path": "observable_markov_equity_curve.csv",
+    "suffix": ".csv",
+    "size_bytes": 30269
+  },
+  {
+    "path": "observable_markov_forecasts.csv",
+    "suffix": ".csv",
+    "size_bytes": 284689
+  },
+  {
+    "path": "observable_markov_stationary_distribution.csv",
+    "suffix": ".csv",
+    "size_bytes": 136
+  },
+  {
+    "path": "observable_markov_stats.csv",
+    "suffix": ".csv",
+    "size_bytes": 113
+  },
+  {
+    "path": "observable_markov_transition_matrix.csv",
+    "suffix": ".csv",
+    "size_bytes": 404
+  },
+  {
+    "path": "output_status.csv",
+    "suffix": ".csv",
+    "size_bytes": 7368
+  },
+  {
+    "path": "paper_cash_ledger.csv",
+    "suffix": ".csv",
+    "size_bytes": 268
+  },
+  {
+    "path": "paper_daily_equity.csv",
+    "suffix": ".csv",
+    "size_bytes": 101
+  },
+  {
+    "path": "paper_equity.csv",
+    "suffix": ".csv",
+    "size_bytes": 101
+  },
+  {
+    "path": "paper_fills.csv",
+    "suffix": ".csv",
+    "size_bytes": 2
+  },
+  {
+    "path": "paper_order_status.csv",
+    "suffix": ".csv",
+    "size_bytes": 64
+  },
+  {
+    "path": "paper_orders.csv",
+    "suffix": ".csv",
+    "size_bytes": 141
+  },
+  {
+    "path": "paper_position_history.csv",
+    "suffix": ".csv",
+    "size_bytes": 273
+  },
+  {
+    "path": "paper_positions.csv",
+    "suffix": ".csv",
+    "size_bytes": 150
+  },
+  {
+    "path": "paper_risk_checks.csv",
+    "suffix": ".csv",
+    "size_bytes": 640
+  },
+  {
+    "path": "paper_trade_ledger.csv",
+    "suffix": ".csv",
+    "size_bytes": 210
+  },
+  {
+    "path": "portfolio_asset_signals.csv",
+    "suffix": ".csv",
+    "size_bytes": 357
+  },
+  {
+    "path": "portfolio_constraint_report.csv",
+    "suffix": ".csv",
+    "size_bytes": 248
+  },
+  {
+    "path": "portfolio_correlation_matrix.csv",
+    "suffix": ".csv",
+    "size_bytes": 2708
+  },
+  {
+    "path": "portfolio_equity_curve.csv",
+    "suffix": ".csv",
+    "size_bytes": 15400
+  },
+  {
+    "path": "portfolio_rebalance_decisions.csv",
+    "suffix": ".csv",
+    "size_bytes": 6168
+  },
+  {
+    "path": "portfolio_risk_report.csv",
+    "suffix": ".csv",
+    "size_bytes": 3365
+  },
+  {
+    "path": "portfolio_stats.csv",
+    "suffix": ".csv",
+    "size_bytes": 283
+  },
+  {
+    "path": "portfolio_trades.csv",
+    "suffix": ".csv",
+    "size_bytes": 10387
+  },
+  {
+    "path": "portfolio_weights.csv",
+    "suffix": ".csv",
+    "size_bytes": 10256
+  },
+  {
+    "path": "position_exposure.png",
+    "suffix": ".png",
+    "size_bytes": 110957
+  },
+  {
+    "path": "random_baseline_paths.csv",
+    "suffix": ".csv",
+    "size_bytes": 4479
+  },
+  {
+    "path": "random_baseline_summary.csv",
+    "suffix": ".csv",
+    "size_bytes": 513
+  },
+  {
+    "path": "random_long_only_baseline.csv",
+    "suffix": ".csv",
+    "size_bytes": 4536
+  },
+  {
+    "path": "random_portfolio_baseline.csv",
+    "suffix": ".csv",
+    "size_bytes": 4553
+  },
+  {
+    "path": "random_rebalance_baseline.csv",
+    "suffix": ".csv",
+    "size_bytes": 4595
+  },
+  {
+    "path": "random_timing_matched_exposure.csv",
+    "suffix": ".csv",
+    "size_bytes": 4718
+  },
+  {
+    "path": "random_timing_matched_turnover.csv",
+    "suffix": ".csv",
+    "size_bytes": 4664
+  },
+  {
+    "path": "regime_probabilities.png",
+    "suffix": ".png",
+    "size_bytes": 381815
+  },
+  {
+    "path": "research_public_feature_summary.csv",
+    "suffix": ".csv",
+    "size_bytes": 6497
+  },
+  {
+    "path": "run_summary.json",
+    "suffix": ".json",
+    "size_bytes": 5126
+  },
+  {
+    "path": "seed_diagnostics.csv",
+    "suffix": ".csv",
+    "size_bytes": 36810
+  },
+  {
+    "path": "state_summary.csv",
+    "suffix": ".csv",
+    "size_bytes": 646
+  },
+  {
+    "path": "statistical_validity_report.csv",
+    "suffix": ".csv",
+    "size_bytes": 181
+  },
+  {
+    "path": "stats.csv",
+    "suffix": ".csv",
+    "size_bytes": 1051
+  },
+  {
+    "path": "stress_tests.csv",
+    "suffix": ".csv",
+    "size_bytes": 1563
+  },
+  {
+    "path": "universe_stats.csv",
+    "suffix": ".csv",
+    "size_bytes": 6521
+  },
+  {
+    "path": "valuation_features.csv",
+    "suffix": ".csv",
+    "size_bytes": 17451
+  },
+  {
+    "path": "volatility_forecasts.csv",
+    "suffix": ".csv",
+    "size_bytes": 2066247
+  },
+  {
+    "path": "warnings.csv",
+    "suffix": ".csv",
+    "size_bytes": 101
+  },
+  {
+    "path": "window_diagnostics.csv",
+    "suffix": ".csv",
+    "size_bytes": 50285
+  },
+  {
+    "path": "wsb_attention_features.csv",
+    "suffix": ".csv",
+    "size_bytes": 16248
+  }
+]
