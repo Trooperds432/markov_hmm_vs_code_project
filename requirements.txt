@@ -9,3 +9,14 @@ statsmodels>=0.14
 pytest>=8.0
 ruff>=0.6.0
 black>=24.0
+black
+hmmlearn
+matplotlib
+numpy
+pandas
+pytest
+ruff
+scikit-learn
+scipy
+statsmodels
+yfinance
