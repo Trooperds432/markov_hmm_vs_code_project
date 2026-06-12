@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import secrets
 
 from fastapi import Depends, FastAPI, HTTPException, Query
